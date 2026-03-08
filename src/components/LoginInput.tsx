@@ -31,7 +31,7 @@ function LoginInput({
       </label>
 
       <div
-        className={`flex h-[40px] w-full items-center rounded-[8px] border bg-white px-3 transition ${
+        className={`flex h-10 w-full items-center rounded-lg border bg-white px-3 transition ${
           isFocused
             ? "border-[#3867D6] shadow-[0_0_0_1px_#3867D6]"
             : "border-[#D1D5DB]"

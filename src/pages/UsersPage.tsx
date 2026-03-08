@@ -24,7 +24,7 @@ function UsersPage() {
         <PageHeader title="Users" />
 
         {isUsersTab ? (
-          <div className="pt-[8px]">
+          <div className="pt-2">
             <PrimaryButton label="Add user" icon={UserPlus} />
           </div>
         ) : null}
@@ -42,7 +42,7 @@ function UsersPage() {
               onChange={(value) => setActiveTab(value as UserTab)}
             />
 
-            <SearchInput className="w-full lg:w-[296px]" />
+            <SearchInput className="w-full lg:w-74" />
           </div>
 
           {isUsersTab ? (

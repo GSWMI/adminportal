@@ -17,7 +17,7 @@ function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#F3F4F6]">
-      <header className="flex h-[100px] items-center justify-center bg-[#0C2039] px-4">
+      <header className="flex h-25 items-center justify-center bg-[#0C2039] px-4">
         <div className="text-center text-white">
           <h1 className="text-[44px] font-medium leading-none tracking-tight">
             GSWMI
@@ -29,7 +29,7 @@ function LoginPage() {
       </header>
 
       <main className="flex flex-1 items-center justify-center px-4 py-10">
-        <div className="w-full max-w-[350px]">
+        <div className="w-full max-w-87.5">
           <div className="text-center">
             <h2 className="text-[18px] font-semibold text-black">
               Welcome to GSWMI Ticketing Portal
@@ -60,7 +60,7 @@ function LoginPage() {
             <button
               type="submit"
               disabled={!isFormValid}
-              className={`h-[48px] w-full rounded-[8px] text-[16px] font-semibold transition ${
+              className={`h-12 w-full rounded-lg text-[16px] font-semibold transition ${
                 isFormValid
                   ? "cursor-pointer bg-[#3867D6] text-white"
                   : "cursor-not-allowed border border-[#D1D5DB] bg-[#E5E7EB] text-[#9CA3AF]"
@@ -72,7 +72,7 @@ function LoginPage() {
         </div>
       </main>
 
-      <footer className="flex h-[48px] items-center justify-center bg-[#E5E7EB] px-4">
+      <footer className="flex h-12 items-center justify-center bg-[#E5E7EB] px-4">
         <p className="text-[14px] text-[#4B5563]">© GSWMI Logistics Team</p>
       </footer>
     </div>

@@ -17,7 +17,7 @@ function AppShell({ children }: AppShellProps) {
 
       <div className="flex h-screen flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto px-8 py-8">
-          <div className="mx-auto w-full max-w-[1120px]">{children}</div>
+          <div className="mx-auto w-full max-w-280">{children}</div>
            {/* <AppFooter /> */}
         </main>
 

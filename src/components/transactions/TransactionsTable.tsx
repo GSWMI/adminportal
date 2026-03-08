@@ -25,9 +25,9 @@ function TransactionsTable({ records }: TransactionsTableProps) {
 
   return (
     <div className="w-full overflow-x-auto">
-      <table className="w-full min-w-[1000px]">
+      <table className="w-full min-w-250">
         <thead>
-          <tr className="h-[44px] border-b border-[#EAECF0] text-left">
+          <tr className="h-11 border-b border-[#EAECF0] text-left">
             <th className="px-5 text-[14px] font-medium text-[#6B7280]">
               <div className="flex items-center gap-1">
                 Attendee <ArrowUpDown size={14} />

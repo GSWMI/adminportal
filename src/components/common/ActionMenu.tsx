@@ -54,7 +54,7 @@ function ActionMenu({ items, align = "right" }: ActionMenuProps) {
 
       {open ? (
         <div
-          className={`absolute top-[calc(100%+8px)] z-50 min-w-[168px] rounded-[14px] border border-[#EAECF0] bg-white p-2 shadow-[0_12px_24px_rgba(16,24,40,0.12)] ${
+          className={`absolute top-[calc(100%+8px)] z-50 min-w-42 rounded-[14px] border border-[#EAECF0] bg-white p-2 shadow-[0_12px_24px_rgba(16,24,40,0.12)] ${
             align === "right" ? "right-0" : "left-0"
           }`}
           role="menu"

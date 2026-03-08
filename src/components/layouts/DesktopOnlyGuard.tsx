@@ -13,7 +13,7 @@ function DesktopOnlyGuard({ children }: DesktopOnlyGuardProps) {
       </div>
 
       <div className="flex min-h-screen items-center justify-center bg-[#F3F4F6] px-6 xl:hidden">
-        <div className="max-w-[420px] rounded-[20px] border border-[#E5E7EB] bg-white p-8 text-center shadow-[0_8px_24px_rgba(16,24,40,0.08)]">
+        <div className="max-w-105 rounded-[20px] border border-[#E5E7EB] bg-white p-8 text-center shadow-[0_8px_24px_rgba(16,24,40,0.08)]">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EEF3FB]">
             <Monitor size={28} className="text-[#3867D6]" />
           </div>

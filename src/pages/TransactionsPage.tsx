@@ -22,7 +22,7 @@ function TransactionsPage({
         <PageHeader title="Transactions" />
 
         {showFilledState ? (
-          <div className="pt-[8px]">
+          <div className="pt-2">
             <PrimaryButton label="Export" icon={Download} />
           </div>
         ) : null}

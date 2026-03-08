@@ -24,7 +24,7 @@ function SegmentedTabs({
             key={item.value}
             type="button"
             onClick={() => onChange(item.value)}
-            className={`h-[38px] px-4 text-[16px] font-semibold transition ${
+            className={`h-9.5 px-4 text-[16px] font-semibold transition ${
               isActive
                 ? "bg-[#E9EEF5] text-[#2A2F3A]"
                 : "bg-white text-[#4B5563]"

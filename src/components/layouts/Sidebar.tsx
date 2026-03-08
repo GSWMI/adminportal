@@ -10,7 +10,7 @@ import UserProfileCard from "./UserProfileCard";
 
 function Sidebar() {
   return (
-    <aside className="flex h-screen w-[300px] flex-col bg-[#0C2039] px-5 py-5">
+    <aside className="flex h-screen w-75 flex-col bg-[#0C2039] px-5 py-5">
       <div className="mb-12 flex justify-center">
         <div className="text-center text-white">
           <h1 className="text-[44px] font-medium leading-none tracking-tight">

@@ -9,9 +9,9 @@ type UsersTableProps = {
 function UsersTable({ users }: UsersTableProps) {
   return (
     <div className="w-full overflow-x-auto">
-      <table className="w-full min-w-[900px]">
+      <table className="w-full min-w-225">
         <thead>
-          <tr className="h-[44px] border-b border-[#EAECF0] text-left">
+          <tr className="h-11 border-b border-[#EAECF0] text-left">
             <th className="px-5 text-[14px] font-medium text-[#6B7280]">
               <div className="flex items-center gap-1">
                 User <ArrowUpDown size={14} />

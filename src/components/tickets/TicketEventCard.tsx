@@ -9,12 +9,12 @@ type TicketEventCardProps = {
 
 function TicketEventCard({ event }: TicketEventCardProps) {
   return (
-    <div className="rounded-[16px] border border-[#D9D9D9] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    <div className="rounded-2xl border border-[#D9D9D9] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="flex items-start gap-4">
         <img
           src={event.imageUrl}
           alt={event.title}
-          className="h-[228px] w-[228px] rounded-[16px] object-cover"
+          className="h-57 w-57 rounded-2xl object-cover"
         />
 
         <div className="min-w-0 flex-1">
@@ -24,7 +24,7 @@ function TicketEventCard({ event }: TicketEventCardProps) {
                 {event.title}
               </h2>
 
-              <p className="mt-3 max-w-[760px] text-[16px] leading-[1.45] text-[#5D6470]">
+              <p className="mt-3 max-w-190 text-[16px] leading-[1.45] text-[#5D6470]">
                 {event.description}
               </p>
 
