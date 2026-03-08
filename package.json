@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
+    "@fontsource/manrope": "^5.2.8",
+    "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@tailwindcss/vite": "^4.2.1",
     "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.1",
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {

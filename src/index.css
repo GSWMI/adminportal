@@ -1,8 +1,9 @@
 @import "tailwindcss";
-@import "@fontsource/inter";
+@import "@fontsource/plus-jakarta-sans";
+
 
 :root {
-  font-family: "Inter", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   color: #111827;
   background: #f3f4f6;
 }
@@ -19,5 +20,5 @@ body,
 }
 
 body {
-  font-family: "Inter", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
 }
