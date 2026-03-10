@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, UserPlus } from "lucide-react";
+import AddUserModal from "../components/users/AddUserModal";
 import OutlineButton from "../components/common/OutlineButton";
 import PrimaryButton from "../components/common/PrimaryButton";
 import SearchInput from "../components/common/SearchInput";
@@ -15,6 +16,7 @@ import type { UserTab } from "../types/users";
 
 function UsersPage() {
   const [activeTab, setActiveTab] = useState<UserTab>("users");
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
   const isUsersTab = activeTab === "users";
 
@@ -25,13 +27,17 @@ function UsersPage() {
 
         {isUsersTab ? (
           <div className="pt-2">
-            <PrimaryButton label="Add user" icon={UserPlus} />
+            <PrimaryButton
+              label="Add user"
+              icon={UserPlus}
+              onClick={() => setIsAddUserOpen(true)}
+            />
           </div>
         ) : null}
       </div>
 
       <div className="mt-8">
-        <SectionCard title="" allowOverflow>
+        <SectionCard allowOverflow>
           <div className="flex flex-col gap-4 border-b border-[#EAECF0] px-5 py-3 lg:flex-row lg:items-center lg:justify-between">
             <SegmentedTabs
               items={[
@@ -50,7 +56,11 @@ function UsersPage() {
               <UsersTable users={userRecords} />
 
               <div className="px-5 py-4">
-                <OutlineButton label="Add user" icon={Plus} />
+                <OutlineButton
+                  label="Add user"
+                  icon={Plus}
+                  onClick={() => setIsAddUserOpen(true)}
+                />
               </div>
 
               <TablePagination
@@ -62,12 +72,16 @@ function UsersPage() {
           ) : (
             <>
               <UserActivityTable records={userActivityRecords} />
-
               <TablePagination pageLabel="Page 1 of 10" />
             </>
           )}
         </SectionCard>
       </div>
+
+      <AddUserModal
+        open={isAddUserOpen}
+        onClose={() => setIsAddUserOpen(false)}
+      />
     </AppShell>
   );
 }
