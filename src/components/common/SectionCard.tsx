@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 type SectionCardProps = {
-  title: string;
+  title?: string;
   action?: ReactNode;
   children: ReactNode;
   bodyClassName?: string;
@@ -19,7 +19,7 @@ function SectionCard({
 }: SectionCardProps) {
   return (
     <section
-      className={`rounded-[16px] border border-[#D9D9D9] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${
+      className={`rounded-2xl border border-[#D9D9D9] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${
         allowOverflow ? "overflow-visible" : "overflow-hidden"
       } ${className}`}
     >

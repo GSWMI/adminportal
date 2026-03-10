@@ -16,7 +16,7 @@ function SidebarNavItem({
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex h-[44px] w-full items-center gap-3 rounded-[12px] px-3 text-left transition ${
+        `flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition ${
           isActive
             ? "bg-[#1D477F] text-white"
             : "bg-transparent text-white/90 hover:bg-white/5"

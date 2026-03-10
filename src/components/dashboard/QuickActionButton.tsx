@@ -12,7 +12,7 @@ function QuickActionButton({
   return (
     <button
       type="button"
-      className="inline-flex h-[48px] items-center gap-3 rounded-[10px] border border-[#D0D5DD] bg-white px-4 text-[#1E497E] shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition hover:bg-[#F8FAFC]"
+      className="inline-flex h-12 items-center gap-3 rounded-[10px] border border-[#D0D5DD] bg-white px-4 text-[#1E497E] shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition hover:bg-[#F8FAFC]"
     >
       <Icon size={18} />
       <span className="text-[16px] font-semibold">{label}</span>

@@ -1,4 +1,6 @@
-import { TicketPlus, UserPlus, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { ExternalLink, TicketPlus, UserPlus } from "lucide-react";
+import AddUserModal from "../components/users/AddUserModal";
 import OutlineButton from "../components/common/OutlineButton";
 import RecordsEmptyState from "../components/common/RecordsEmptyState";
 import SectionCard from "../components/common/SectionCard";
@@ -14,6 +16,8 @@ type DashboardPageProps = {
 };
 
 function DashboardPage({ showFilledState = false }: DashboardPageProps) {
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+
   const stats = showFilledState ? filledStats : emptyStats;
   const previewRecords = transactionRecords.slice(0, 7);
 
@@ -34,7 +38,11 @@ function DashboardPage({ showFilledState = false }: DashboardPageProps) {
 
         <div className="mt-4 flex items-center gap-3">
           <OutlineButton label="Add ticket" icon={TicketPlus} />
-          <OutlineButton label="Add user" icon={UserPlus} />
+          <OutlineButton
+            label="Add user"
+            icon={UserPlus}
+            onClick={() => setIsAddUserOpen(true)}
+          />
         </div>
       </div>
 
@@ -46,6 +54,7 @@ function DashboardPage({ showFilledState = false }: DashboardPageProps) {
               <OutlineButton label="View all" icon={ExternalLink} />
             ) : undefined
           }
+          allowOverflow
         >
           {showFilledState ? (
             <TransactionsTable records={previewRecords} />
@@ -54,6 +63,11 @@ function DashboardPage({ showFilledState = false }: DashboardPageProps) {
           )}
         </SectionCard>
       </div>
+
+      <AddUserModal
+        open={isAddUserOpen}
+        onClose={() => setIsAddUserOpen(false)}
+      />
     </AppShell>
   );
 }

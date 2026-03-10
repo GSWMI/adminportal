@@ -18,9 +18,9 @@ function TransactionsTable({ transactions }: TransactionsTableProps) {
         </button>
       </div>
 
-      <table className="w-full min-w-[760px] border-t border-[#EAECF0]">
+      <table className="w-full min-w-190 border-t border-[#EAECF0]">
         <thead>
-          <tr className="h-[44px] text-left">
+          <tr className="h-11 text-left">
             <th className="px-5 text-[14px] font-medium text-[#6B7280]">
               <input type="checkbox" className="h-5 w-5 rounded border-[#D0D5DD]" />
             </th>

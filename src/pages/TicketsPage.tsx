@@ -36,7 +36,7 @@ function TicketsPage({ showFilledState = false }: TicketsPageProps) {
         </div>
 
         {showFilledState ? (
-          <div className="pt-[40px]">
+          <div className="pt-10">
             <PrimaryButton label="Add ticket" icon={TicketPlus} />
           </div>
         ) : null}
