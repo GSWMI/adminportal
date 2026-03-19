@@ -29,21 +29,21 @@ function TicketCard({ ticket }: { ticket: TicketEvent }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 relative">
       <div className="flex gap-5">
-        <div className="w-[160px] h-[120px] rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+        <div className="w-40 h-30 rounded-lg overflow-hidden shrink-0 bg-gray-100">
           {ticket.bannerPreview
             ? <img src={ticket.bannerPreview} alt={ticket.programName} className="w-full h-full object-cover" />
-            : <div className="w-full h-full bg-gradient-to-br from-purple-400 to-orange-400" />
+            : <div className="w-full h-full bg-linear-to-br from-purple-400 to-orange-400" />
           }
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="text-[16px] font-semibold text-gray-900">{ticket.programName}</h3>
-            <div className="relative flex-shrink-0">
+            <div className="relative shrink-0">
               <button onClick={() => setMenuOpen((v) => !v)} className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-400">
                 <MoreVertical size={16} />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[180px]">
+                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-45">
                   <button onClick={() => handleMenuAction('view')} className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50">View details</button>
                   <button onClick={() => handleMenuAction('archive')} className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50">Archive event</button>
                   <button onClick={() => handleMenuAction('close')} className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50">Close registration</button>
@@ -116,7 +116,7 @@ export default function TicketsPage() {
   const filtered = mockTickets.filter((t) => t.status === activeTab)
 
   return (
-    <div className="max-w-[1000px]">
+    <div className="max-w-250">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <h1 className="text-[22px] font-semibold text-gray-900">Tickets</h1>

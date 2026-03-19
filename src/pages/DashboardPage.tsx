@@ -55,7 +55,7 @@ export default function DashboardPage() {
   const hasOrders = orders.length > 0
 
   return (
-    <div className="max-w-[1100px]">
+    <div className="max-w-275">
       <h1 className="text-[22px] font-semibold text-gray-900 mb-6">Dashboard</h1>
 
       {/* Stat Cards */}
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                           <MoreVertical size={15} />
                         </button>
                         {openMenuId === order._id && (
-                          <div className="absolute right-4 bottom-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[130px]">
+                          <div className="absolute right-4 bottom-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-32.5">
                             <button
                               onClick={() => { setOpenMenuId(null); navigate(`/transactions/${order._id}`) }}
                               className="w-full text-left px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"

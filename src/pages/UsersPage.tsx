@@ -67,7 +67,7 @@ function UserRow({ user, openMenuId, setOpenMenuId, onRemove }: {
               <MoreVertical size={15} />
             </button>
             {menuOpen && (
-              <div className="absolute right-4 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[155px]">
+              <div className="absolute right-4 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-38.75">
                 <button
                   onClick={() => { setOpenMenuId(null); toast('Coming soon') }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
@@ -124,7 +124,7 @@ export default function UsersPage() {
   )
 
   return (
-    <div className="max-w-[1000px]">
+    <div className="max-w-250">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-[22px] font-semibold text-gray-900">Users</h1>

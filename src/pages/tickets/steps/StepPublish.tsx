@@ -69,7 +69,7 @@ export default function StepPublish({ onPreview }: Props) {
         {/* URL */}
         <div className="flex items-center gap-2 w-full border border-gray-200 rounded-lg px-3 py-2.5 mb-4 bg-gray-50">
           <span className="flex-1 text-[13px] text-gray-600 truncate">{ticketUrl}</span>
-          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors shrink-0">
             <Copy size={15} />
           </button>
         </div>

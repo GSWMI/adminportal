@@ -16,13 +16,13 @@ const Receipt = forwardRef<HTMLDivElement, Props>(({ transaction: tx }, ref) => 
   return (
     <div
       ref={ref}
-      className="bg-white w-[620px] px-10 py-8 font-sans"
+      className="bg-white w-155 px-10 py-8 font-sans"
       style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         {/* Logo box */}
-        <div className="bg-[#0d1b2a] px-5 py-4 rounded-lg w-[160px] flex flex-col">
+        <div className="bg-[#0d1b2a] px-5 py-4 rounded-lg w-40 flex flex-col">
           <span className="text-white text-lg font-bold font-serif italic">╱GSWMI</span>
           <span className="text-white/50 text-[7px] tracking-widest uppercase leading-tight mt-0.5">
             Gbenga Samuel-Wemimo Ministry International

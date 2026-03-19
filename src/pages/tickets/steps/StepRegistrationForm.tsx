@@ -56,7 +56,7 @@ export default function StepRegistrationForm() {
           <div className="flex flex-col gap-2.5 mb-3">
             {form.customFields.map((field, index) => (
               <div key={field.id} className="flex items-start gap-2 p-3 border border-gray-200 rounded-lg bg-white">
-                <span className="text-[12px] text-gray-400 font-medium mt-2.5 w-5 flex-shrink-0">
+                <span className="text-[12px] text-gray-400 font-medium mt-2.5 w-5 shrink-0">
                   {index + 1}.
                 </span>
                 <div className="flex-1 flex flex-col gap-2">
@@ -82,7 +82,7 @@ export default function StepRegistrationForm() {
                 </div>
                 <button
                   onClick={() => removeCustomField(field.id)}
-                  className="mt-2 text-red-400 hover:text-red-500 transition-colors flex-shrink-0"
+                  className="mt-2 text-red-400 hover:text-red-500 transition-colors shrink-0"
                 >
                   <X size={15} />
                 </button>

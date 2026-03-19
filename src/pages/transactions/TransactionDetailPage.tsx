@@ -24,7 +24,7 @@ export default function TransactionDetailPage() {
   const filename = `receipt-${tx.transactionId}`
 
   return (
-    <div className="max-w-[860px]">
+    <div className="max-w-215">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/transactions')} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -133,7 +133,7 @@ export default function TransactionDetailPage() {
         </button>
 
         {showDownloadMenu && !downloading && (
-          <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[175px] z-10">
+          <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-43.75 z-10">
             <button
               onClick={() => { setShowDownloadMenu(false); downloadPDF(filename) }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"

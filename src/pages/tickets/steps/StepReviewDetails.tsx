@@ -59,7 +59,7 @@ export default function StepReviewDetails() {
               <img
                 src={form.bannerPreview}
                 alt="Banner"
-                className="w-[80px] h-[80px] rounded-lg object-cover"
+                className="w-20 h-20 rounded-lg object-cover"
               />
             )}
             {form.programName && (
@@ -122,7 +122,7 @@ export default function StepReviewDetails() {
                         <tbody>
                           {slot.options.map((opt) => (
                             <tr key={opt.id} className="border-t border-gray-50">
-                              <td className="py-1.5 text-[12px] text-gray-700 max-w-[160px] truncate pr-2">{opt.name}</td>
+                              <td className="py-1.5 text-[12px] text-gray-700 max-w-40 truncate pr-2">{opt.name}</td>
                               <td className="py-1.5 text-[12px] text-gray-700">₦ {opt.price.toLocaleString()}</td>
                               <td className="py-1.5 text-[12px] text-gray-700">{opt.limit}</td>
                             </tr>

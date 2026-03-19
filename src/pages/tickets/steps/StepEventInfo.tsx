@@ -38,7 +38,7 @@ export default function StepEventInfo() {
       <div className="flex items-center gap-3 mb-5">
         <div
           onClick={() => fileRef.current?.click()}
-          className="w-[88px] h-[88px] rounded-lg overflow-hidden cursor-pointer flex-shrink-0 border border-gray-200"
+          className="w-22 h-22 rounded-lg overflow-hidden cursor-pointer shrink-0 border border-gray-200"
         >
           {form.bannerPreview ? (
             <img src={form.bannerPreview} alt="Banner" className="w-full h-full object-cover" />
@@ -121,7 +121,7 @@ export default function StepEventInfo() {
           type="button"
           onClick={openGoogleMaps}
           title="Verify on Google Maps"
-          className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-all flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-all shrink-0"
         >
           <ExternalLink size={13} />
           Maps

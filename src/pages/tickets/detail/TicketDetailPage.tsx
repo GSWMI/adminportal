@@ -33,7 +33,7 @@ function EventInfoSection({ ticket, editing, onEdit, onSave }: {
           <h2 className="text-[15px] font-semibold text-[#3b5bdb]">Event info</h2>
           <button onClick={onEdit} className="text-gray-400 hover:text-gray-600 transition-colors"><Pencil size={15} /></button>
         </div>
-        {banner && <img src={banner} alt="" className="w-[80px] h-[80px] rounded-lg object-cover mb-3" />}
+        {banner && <img src={banner} alt="" className="w-20 h-20 rounded-lg object-cover mb-3" />}
         <p className="text-[15px] font-semibold text-gray-900 mb-2">{ticket.programName}</p>
         <p className="text-[13px] text-gray-600 leading-relaxed mb-4">{ticket.description}</p>
         <div className="flex items-center gap-2 text-[13px] text-gray-600 mb-2">
@@ -54,7 +54,7 @@ function EventInfoSection({ ticket, editing, onEdit, onSave }: {
         <h2 className="text-[15px] font-semibold text-[#3b5bdb]">Event info</h2>
       </div>
       <div className="flex items-center gap-3 mb-4">
-        <div onClick={() => fileRef.current?.click()} className="w-[80px] h-[80px] rounded-lg overflow-hidden cursor-pointer bg-gray-100 flex-shrink-0">
+        <div onClick={() => fileRef.current?.click()} className="w-20 h-20 rounded-lg overflow-hidden cursor-pointer bg-gray-100 shrink-0">
           {banner ? <img src={banner} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full" />}
         </div>
         <button onClick={() => fileRef.current?.click()} className="text-[13px] text-gray-600 underline">Change banner</button>
@@ -178,7 +178,7 @@ function OptionsSection({ ticket, editing, onEdit, onSave }: {
                               <tbody>
                                 {slot.options.map((opt) => (
                                   <tr key={opt.id} className="border-t border-gray-50">
-                                    <td className="py-2 text-[12px] text-gray-700 truncate max-w-[160px] pr-2">{opt.name}</td>
+                                    <td className="py-2 text-[12px] text-gray-700 truncate max-w-40 pr-2">{opt.name}</td>
                                     <td className="py-2 text-[12px] text-gray-700">₦ {opt.price.toLocaleString()}</td>
                                     <td className="py-2 text-[12px] text-gray-700">{opt.limit}</td>
                                     {editing && (
@@ -300,7 +300,7 @@ export default function TicketDetailPage() {
   }
 
   return (
-    <div className="max-w-[1000px]">
+    <div className="max-w-250">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/tickets')} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -311,7 +311,7 @@ export default function TicketDetailPage() {
 
       <div className="flex gap-8">
         {/* Left nav */}
-        <div className="w-[220px] flex-shrink-0">
+        <div className="w-55 shrink-0">
           {SECTIONS.map((sec, i) => (
             <button key={sec} onClick={() => { setActiveSection(i); setEditingSection(null) }}
               className="w-full flex items-center justify-between py-2.5 text-left transition-colors group">

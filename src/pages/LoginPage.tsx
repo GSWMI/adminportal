@@ -49,7 +49,7 @@ export default function LoginPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-[340px]">
+        <div className="w-full max-w-85">
           <div className="text-center mb-8">
             <h1 className="text-[22px] font-semibold text-gray-900 mb-1">
               Welcome to GSWMI Ticketing Portal

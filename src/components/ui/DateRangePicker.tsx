@@ -66,7 +66,7 @@ export default function DateRangePicker({ startDate, endDate, onApply, onCancel 
   const canApply = !!tempStart
 
   return (
-    <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-4 w-[310px]">
+    <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-4 w-77.5">
 
       {/* Picking indicator */}
       <div className="flex items-center gap-2 mb-3">

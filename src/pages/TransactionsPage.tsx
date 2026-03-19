@@ -57,19 +57,19 @@ function TransactionRow({ tx, openMenuId, setOpenMenuId }: TransactionRowProps) 
           <MoreVertical size={15} />
         </button>
         {menuOpen && (
-          <div className="absolute right-0 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[175px]">
+          <div className="absolute right-0 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-43.75">
             <button
               onClick={() => { setOpenMenuId(null); navigate(`/transactions/${tx.id}`) }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
-              <FileText size={14} className="text-gray-400 flex-shrink-0" />
+              <FileText size={14} className="text-gray-400 shrink-0" />
               View details
             </button>
             <button
               onClick={() => { setOpenMenuId(null); navigate(`/transactions/${tx.id}`) }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
-              <ExternalLink size={14} className="text-gray-400 flex-shrink-0" />
+              <ExternalLink size={14} className="text-gray-400 shrink-0" />
               Download receipt
             </button>
           </div>
@@ -106,7 +106,7 @@ export default function TransactionsPage() {
   }, [])
 
   return (
-    <div className="max-w-[1100px]">
+    <div className="max-w-275">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-[22px] font-semibold text-gray-900">Transactions</h1>
         {hasTransactions && (
