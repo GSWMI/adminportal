@@ -46,6 +46,7 @@ export interface TicketFormData {
   startDate: string
   endDate: string
   location: string
+  totalDays: number
 
   // Step 2 - Ticket type
   ticketType: TicketType
@@ -97,6 +98,7 @@ const initialForm: TicketFormData = {
   startDate: '',
   endDate: '',
   location: '',
+  totalDays: 3,
   ticketType: '',
   days: defaultDays(),
   customFields: [],

@@ -12,7 +12,7 @@ export default function DashboardLayout() {
         <main className="flex-1 p-8">
           <Outlet />
         </main>
-        <footer className="py-3 px-8 text-center text-[12px] text-gray-400 border-t border-gray-200 bg-white flex-shrink-0">
+        <footer className="py-3 px-8 text-center text-[12px] text-gray-400 border-t border-gray-200 bg-white shrink-0">
           © GSWMI Logistics Team
         </footer>
       </div>

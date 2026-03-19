@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Calendar, MapPin, ImageIcon, ExternalLink } from 'lucide-react'
+import { Calendar, MapPin, ImageIcon, ExternalLink, Hash } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
 import RichTextEditor from '../../../components/ui/RichTextEditor'
 import DateRangePicker from '../../../components/ui/DateRangePicker'
@@ -24,10 +24,7 @@ export default function StepEventInfo() {
 
   const openGoogleMaps = () => {
     const query = form.location ? encodeURIComponent(form.location) : ''
-    const url = query
-      ? `https://www.google.com/maps/search/${query}`
-      : 'https://www.google.com/maps'
-    window.open(url, '_blank')
+    window.open(query ? `https://www.google.com/maps/search/${query}` : 'https://www.google.com/maps', '_blank')
   }
 
   return (
@@ -74,7 +71,7 @@ export default function StepEventInfo() {
         />
       </div>
 
-      {/* Date range — opens UPWARD */}
+      {/* Date range — opens upward */}
       <div className="relative mb-3">
         <button
           type="button"
@@ -89,7 +86,6 @@ export default function StepEventInfo() {
           )}
         </button>
 
-        {/* Open upward: bottom-full positions above the button */}
         {showDatePicker && (
           <div className="absolute bottom-full left-0 z-20 mb-2">
             <DateRangePicker
@@ -105,7 +101,21 @@ export default function StepEventInfo() {
         )}
       </div>
 
-      {/* Location with Google Maps link */}
+      {/* Total days */}
+      <div className="relative mb-3">
+        <Hash size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="number"
+          min={1}
+          value={form.totalDays}
+          onChange={(e) => updateEventInfo({ totalDays: Number(e.target.value) })}
+          placeholder="Total number of days"
+          className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-[13px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-gray-400">days</span>
+      </div>
+
+      {/* Location with Google Maps */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

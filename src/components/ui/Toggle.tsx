@@ -13,7 +13,7 @@ export default function Toggle({ checked, onChange, disabled = false }: Props) {
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`
-        relative inline-flex h-6 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
+        relative inline-flex h-6 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent
         transition-colors duration-200 ease-in-out focus:outline-none
         ${checked ? 'bg-[#3b5bdb]' : 'bg-gray-200'}
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}

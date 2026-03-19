@@ -21,9 +21,9 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-[272px] h-screen sticky top-0 bg-[#0d1b2a] flex flex-col flex-shrink-0 overflow-hidden">
+    <aside className="w-68 h-screen sticky top-0 bg-[#0d1b2a] flex flex-col shrink-0 overflow-hidden">
       {/* Logo */}
-      <div className="px-5 pt-6 pb-4 flex-shrink-0">
+      <div className="px-5 pt-6 pb-4 shrink-0">
         <div className="flex flex-col">
           <span className="text-white text-xl font-bold tracking-wide font-serif italic">╱GSWMI</span>
           <span className="text-white/40 text-[8px] tracking-widest uppercase leading-tight">
@@ -33,9 +33,9 @@ export default function Sidebar() {
       </div>
 
       {/* Search */}
-      <div className="px-4 mb-4 flex-shrink-0">
+      <div className="px-4 mb-4 shrink-0">
         <div className="flex items-center gap-2 bg-[#1a2e42] rounded-lg px-3 py-2">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white/40 flex-shrink-0">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-white/40 shrink-0">
             <circle cx="11" cy="11" r="8" strokeWidth="2" />
             <path d="m21 21-4.35-4.35" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -68,12 +68,12 @@ export default function Sidebar() {
       </nav>
 
       {/* User profile — always pinned to bottom */}
-      <div className="px-3 pb-4 flex-shrink-0 relative">
+      <div className="px-3 pb-4 shrink-0 relative">
         <button
           onClick={() => setShowUserMenu((v) => !v)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all"
         >
-          <div className="w-8 h-8 rounded-full bg-[#3b5bdb] flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <div className="w-8 h-8 rounded-full bg-[#3b5bdb] flex items-center justify-center shrink-0 overflow-hidden">
             {user?.avatar ? (
               <img src={user.avatar} alt={user.username} className="w-full h-full object-cover" />
             ) : (

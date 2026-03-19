@@ -116,9 +116,9 @@ export default function TicketPreviewPage() {
       </div>
 
       {/* Event hero */}
-      <div className="max-w-[960px] mx-auto px-4 py-8">
+      <div className="max-w-240 mx-auto px-4 py-8">
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm mb-6">
-          <div className="grid grid-cols-[1fr_1fr] min-h-[300px]">
+          <div className="grid grid-cols-[1fr_1fr] min-h-75">
             {/* Banner */}
             <div className="overflow-hidden">
               {form.bannerPreview ? (
@@ -252,7 +252,7 @@ function DayContent({
                       className="accent-[#3b5bdb]"
                       onChange={() => onSelect(day.id, slot.id, opt.id)}
                     />
-                    <span className="text-[13px] text-gray-600 truncate max-w-[200px]">{opt.name}</span>
+                    <span className="text-[13px] text-gray-600 truncate max-w-50">{opt.name}</span>
                     <span className="text-[12px] text-gray-400">-</span>
                     <span className="text-[13px] text-gray-700">₦{opt.price.toLocaleString()}</span>
                   </div>
@@ -320,7 +320,7 @@ function TotalSummary({ rows, grandTotal }: { rows: { dayLabel: string; slot: st
                   {dayRows.map((row, i) => (
                     <tr key={i} className="border-b border-gray-50">
                       <td className="py-2 text-[13px] text-gray-700">{row.slot}</td>
-                      <td className="py-2 text-[13px] text-gray-700 max-w-[180px] truncate">{row.option}</td>
+                      <td className="py-2 text-[13px] text-gray-700 max-w-45 truncate">{row.option}</td>
                       <td className="py-2 text-[13px] text-gray-700">{row.qty}</td>
                       <td className="py-2 text-[13px] text-gray-700">₦{row.price.toLocaleString()}</td>
                       <td className="py-2 text-[13px] text-gray-700 text-right">₦{row.total.toLocaleString()}</td>

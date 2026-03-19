@@ -1,41 +1,33 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useNavigate, Navigate } from 'react-router-dom'
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useFormik } from 'formik'
-import * as Yup from 'yup'
 import { toast } from 'sonner'
 import { useAuth } from '../hooks/useAuth'
-import api from '../lib/axios'
-
-const loginSchema = Yup.object({
-  username: Yup.string().required('Username is required'),
-  password: Yup.string().required('Password is required'),
-})
+import { loginSchema, loginInitialValues } from '../validations/authValidation'
+import { loginUser } from '../services/authService'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
+  // All hooks must be called before any early return
   const formik = useFormik({
-    initialValues: { username: '', password: '' },
+    initialValues: loginInitialValues,
     validationSchema: loginSchema,
     validateOnChange: false,
     validateOnBlur: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        // TODO: replace endpoint with real one
-        const { data } = await api.post('/auth/login', {
-          username: values.username,
-          password: values.password,
-        })
-        login(data.token, data.user)
+        const { token, user } = await loginUser(values)
+        login(token, user)
         toast.success('Welcome back!')
         navigate('/dashboard')
       } catch (err: unknown) {
         const message =
-          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-          'Invalid username or password'
+          (err as { response?: { data?: { message?: string } } })
+            ?.response?.data?.message ?? 'Invalid email or password'
         toast.error(message)
       } finally {
         setSubmitting(false)
@@ -43,7 +35,12 @@ export default function LoginPage() {
     },
   })
 
-  const isFilled = formik.values.username.trim() !== '' && formik.values.password.trim() !== ''
+  // Early return AFTER all hooks
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  const isFilled = formik.values.email.trim() !== '' && formik.values.password.trim() !== ''
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -52,7 +49,7 @@ export default function LoginPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-[340px]">
+        <div className="w-full max-w-85">
           <div className="text-center mb-8">
             <h1 className="text-[22px] font-semibold text-gray-900 mb-1">
               Welcome to GSWMI Ticketing Portal
@@ -61,31 +58,33 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={formik.handleSubmit} className="flex flex-col gap-5">
+            {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[14px] font-medium text-gray-700">Username</label>
+              <label className="text-[14px] font-medium text-gray-700">Email</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <User size={16} />
+                  <Mail size={16} />
                 </span>
                 <input
-                  type="text"
-                  name="username"
-                  value={formik.values.username}
+                  type="email"
+                  name="email"
+                  value={formik.values.email}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  placeholder="Enter your username"
+                  placeholder="Enter your email"
                   className={`w-full pl-9 pr-4 py-2.5 rounded-lg border text-[14px] text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 transition-all ${
-                    formik.touched.username && formik.errors.username
+                    formik.touched.email && formik.errors.email
                       ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
                       : 'border-gray-300 focus:border-[#3b5bdb] focus:ring-[#3b5bdb]/20'
                   }`}
                 />
               </div>
-              {formik.touched.username && formik.errors.username && (
-                <p className="text-[12px] text-red-500">{formik.errors.username}</p>
+              {formik.touched.email && formik.errors.email && (
+                <p className="text-[12px] text-red-500">{formik.errors.email}</p>
               )}
             </div>
 
+            {/* Password */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[14px] font-medium text-gray-700">Password</label>
               <div className="relative">
@@ -118,6 +117,7 @@ export default function LoginPage() {
               )}
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={!isFilled || formik.isSubmitting}

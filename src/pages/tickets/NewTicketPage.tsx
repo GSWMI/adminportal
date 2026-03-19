@@ -7,8 +7,6 @@ import StepOptions from './steps/StepOptions'
 import StepRegistrationForm from './steps/StepRegistrationForm'
 import StepReviewDetails from './steps/StepReviewDetails'
 import StepPublish from './steps/StepPublish'
-
-// import StepEventInfo from '../../steps/StepEventInfo'
 import { toast } from 'sonner'
 
 const STEPS = [
@@ -22,7 +20,7 @@ const STEPS = [
 
 function canProceed(step: number, form: ReturnType<typeof useTicketStore.getState>['form']): boolean {
   switch (step) {
-    case 0: return !!form.programName.trim() && !!form.startDate
+    case 0: return !!form.programName.trim() && !!form.startDate && !!form.endDate && form.totalDays >= 1
     case 1: return !!form.ticketType
     case 2: return form.days.some((d) => d.slots.some((s) => s.options.length > 0))
     case 3: return true // Registration form is optional beyond defaults
