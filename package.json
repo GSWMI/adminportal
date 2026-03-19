@@ -14,11 +14,20 @@
     "@fontsource/manrope": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/react-table": "^8.21.3",
+    "@types/canvas-confetti": "^1.9.0",
+    "axios": "^1.13.6",
+    "canvas-confetti": "^1.9.4",
+    "formik": "^2.4.9",
     "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-loading-skeleton": "^3.5.0",
     "react-router-dom": "^7.13.1",
-    "tailwindcss": "^4.2.1"
+    "sonner": "^2.0.7",
+    "tailwindcss": "^4.2.1",
+    "yup": "^1.7.1",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
