@@ -1,11 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Ticket, Calendar, MapPin, MoreVertical, Plus } from 'lucide-react'
-import { mockTickets, type TicketEvent } from '../data/mockTickets'
+import { getAllEvents, updateRegistration, type EventData } from '../services/eventService'
 import { toast } from 'sonner'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
 function formatDate(s: string) {
+  if (!s) return ''
   return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// Determine upcoming vs past based on endDate
+function getStatus(event: EventData): 'upcoming' | 'past' {
+  return new Date(event.endDate) >= new Date() ? 'upcoming' : 'past'
 }
 
 const TYPE_BUTTONS = [
@@ -15,58 +23,91 @@ const TYPE_BUTTONS = [
   { key: 'transport', label: 'Transport tickets', path: 'transport-tickets' },
 ]
 
-function TicketCard({ ticket }: { ticket: TicketEvent }) {
-  const navigate = useNavigate()
-  const [menuOpen, setMenuOpen] = useState(false)
+interface TicketCardProps {
+  event: EventData
+  openMenuId: string | null
+  setOpenMenuId: (id: string | null) => void
+  onRegistrationToggle: (id: string, open: boolean) => void
+}
 
-  const handleMenuAction = (action: string) => {
-    setMenuOpen(false)
-    if (action === 'view') navigate(`/tickets/${ticket.id}`)
-    if (action === 'archive') toast.success('Event archived')
-    if (action === 'close') toast.success('Registration closed')
-  }
+function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: TicketCardProps) {
+  const navigate = useNavigate()
+  const menuOpen = openMenuId === event._id
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 relative">
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
       <div className="flex gap-5">
-        <div className="w-40 h-30 rounded-lg overflow-hidden shrink-0 bg-gray-100">
-          {ticket.bannerPreview
-            ? <img src={ticket.bannerPreview} alt={ticket.programName} className="w-full h-full object-cover" />
-            : <div className="w-full h-full bg-linear-to-br from-purple-400 to-orange-400" />
+        {/* Banner */}
+        <div className="w-[160px] h-[120px] rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+          {event.bannerUrl
+            ? <img src={event.bannerUrl} alt={event.name} className="w-full h-full object-cover" />
+            : <div className="w-full h-full bg-gradient-to-br from-purple-400 to-orange-400" />
           }
         </div>
+
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-[16px] font-semibold text-gray-900">{ticket.programName}</h3>
-            <div className="relative shrink-0">
-              <button onClick={() => setMenuOpen((v) => !v)} className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-400">
+            <h3 className="text-[16px] font-semibold text-gray-900">{event.name}</h3>
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setOpenMenuId(menuOpen ? null : event._id)}
+                className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-400"
+              >
                 <MoreVertical size={16} />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-45">
-                  <button onClick={() => handleMenuAction('view')} className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50">View details</button>
-                  <button onClick={() => handleMenuAction('archive')} className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50">Archive event</button>
-                  <button onClick={() => handleMenuAction('close')} className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50">Close registration</button>
+                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[185px]">
+                  <button
+                    onClick={() => { setOpenMenuId(null); navigate(`/tickets/${event._id}`) }}
+                    className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                  >
+                    View details
+                  </button>
+                  <button
+                    onClick={() => { setOpenMenuId(null); toast('Archive coming soon') }}
+                    className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                  >
+                    Archive event
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenMenuId(null)
+                      onRegistrationToggle(event._id, !event.registrationOpen)
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                  >
+                    {event.registrationOpen ? 'Close registration' : 'Open registration'}
+                  </button>
                 </div>
               )}
             </div>
           </div>
-          <p className="text-[13px] text-gray-500 mb-3 line-clamp-2">{ticket.description}</p>
+
+          <p className="text-[13px] text-gray-500 mb-3 line-clamp-2">{event.description}</p>
+
           <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-1.5 text-[12px] text-gray-500">
               <Calendar size={13} className="text-gray-400" />
-              {formatDate(ticket.startDate)} — {formatDate(ticket.endDate)}
+              {formatDate(event.startDate)} — {formatDate(event.endDate)}
             </div>
-            <div className="flex items-center gap-1.5 text-[12px] text-[#3b5bdb]">
-              <MapPin size={13} />
-              {ticket.location}
-            </div>
+            {event.location && (
+              <div className="flex items-center gap-1.5 text-[12px] text-[#3b5bdb]">
+                <MapPin size={13} />
+                {event.location}
+              </div>
+            )}
+            {!event.registrationOpen && (
+              <span className="px-2 py-0.5 bg-red-50 text-red-500 border border-red-200 rounded-full text-[11px] font-medium">
+                Registration closed
+              </span>
+            )}
           </div>
+
           <div className="flex items-center gap-2 flex-wrap">
             {TYPE_BUTTONS.map(({ key, label, path }) => (
               <button
                 key={key}
-                onClick={() => navigate(`/tickets/${ticket.id}/${path}`)}
+                onClick={() => navigate(`/tickets/${event._id}/${path}`)}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-[#3b5bdb]/40 text-[#3b5bdb] rounded-lg text-[12px] font-medium hover:bg-blue-50 transition-colors"
               >
                 {label}
@@ -113,16 +154,56 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 export default function TicketsPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
-  const filtered = mockTickets.filter((t) => t.status === activeTab)
+  const [events, setEvents] = useState<EventData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const data = await getAllEvents()
+        setEvents(data)
+      } catch {
+        toast.error('Failed to load tickets')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchEvents()
+  }, [])
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleRegistrationToggle = async (id: string, open: boolean) => {
+    try {
+      await updateRegistration(id, 'all', open)
+      setEvents((prev) => prev.map((e) => e._id === id ? { ...e, registrationOpen: open } : e))
+      toast.success(open ? 'Registration opened' : 'Registration closed')
+    } catch {
+      toast.error('Failed to update registration')
+    }
+  }
+
+  const filtered = events.filter((e) => getStatus(e) === activeTab)
 
   return (
-    <div className="max-w-250">
+    <div className="max-w-[1000px]" ref={containerRef}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <h1 className="text-[22px] font-semibold text-gray-900">Tickets</h1>
           <TabBar active={activeTab} onChange={setActiveTab} />
         </div>
-        {mockTickets.length > 0 && (
+        {!loading && events.length > 0 && (
           <button onClick={() => navigate('/tickets/new')} className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors">
             <Ticket size={15} />
             Add ticket
@@ -130,11 +211,34 @@ export default function TicketsPage() {
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex gap-5">
+                <Skeleton width={160} height={120} className="rounded-lg flex-shrink-0" />
+                <div className="flex-1">
+                  <Skeleton height={20} width="60%" className="mb-2" />
+                  <Skeleton height={14} count={2} className="mb-3" />
+                  <Skeleton height={14} width="40%" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState onAdd={() => navigate('/tickets/new')} />
       ) : (
         <div className="flex flex-col gap-3">
-          {filtered.map((t) => <TicketCard key={t.id} ticket={t} />)}
+          {filtered.map((event) => (
+            <TicketCard
+              key={event._id}
+              event={event}
+              openMenuId={openMenuId}
+              setOpenMenuId={setOpenMenuId}
+              onRegistrationToggle={handleRegistrationToggle}
+            />
+          ))}
           <div className="bg-white rounded-xl border border-dashed border-gray-300 p-4 flex items-center justify-center">
             <button onClick={() => navigate('/tickets/new')} className="flex items-center gap-2 text-[13px] text-gray-400 hover:text-gray-600 transition-colors">
               <Plus size={15} />

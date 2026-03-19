@@ -1,9 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Download, FileText, Image } from 'lucide-react'
-import { useState } from 'react'
-import { mockTransactions } from '../../data/mockTransactions'
+import { useState, useEffect } from 'react'
+import { getOrderById, mapPaymentStatus, getTicketTypes, type OrderData } from '../../services/orderService'
 import Receipt from './Receipt'
 import { useReceiptDownload } from '../../hooks/useReceiptDownload'
+import { toast } from 'sonner'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
 const STATUS_STYLES: Record<string, string> = {
   Successful: 'text-green-600 bg-green-50 border-green-200',
@@ -12,19 +15,60 @@ const STATUS_STYLES: Record<string, string> = {
   Failed: 'text-red-600 bg-red-50 border-red-200',
 }
 
+function formatDateTime(s: string) {
+  if (!s) return '—'
+  return new Date(s).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
+
 export default function TransactionDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
+  const [order, setOrder] = useState<OrderData | null>(null)
+  const [loading, setLoading] = useState(true)
   const { receiptRef, downloadPDF, downloadImage, downloading } = useReceiptDownload()
 
-  const tx = mockTransactions.find((t) => t.id === id)
-  if (!tx) return <div className="text-center py-20 text-gray-400">Transaction not found</div>
+  useEffect(() => {
+    if (!id) return
+    async function fetchOrder() {
+      try {
+        const data = await getOrderById(id!)
+        setOrder(data)
+      } catch {
+        toast.error('Failed to load transaction details')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchOrder()
+  }, [id])
 
-  const filename = `receipt-${tx.transactionId}`
+  if (loading) {
+    return (
+      <div className="max-w-[860px]">
+        <div className="flex items-center gap-3 mb-6">
+          <Skeleton width={24} height={24} />
+          <Skeleton width={200} height={22} />
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 px-8 py-6">
+          <Skeleton count={8} height={18} className="mb-3" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!order) return <div className="text-center py-20 text-gray-400">Transaction not found</div>
+
+  const status = mapPaymentStatus(order)
+  const ticketTypes = getTicketTypes(order)
+  const filename = `receipt-${order.orderNumber}`
+  const gateway = order.paystackReference ? 'Paystack' : '—'
 
   return (
-    <div className="max-w-215">
+    <div className="max-w-[860px]">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/transactions')} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -35,25 +79,28 @@ export default function TransactionDetailPage() {
 
       {/* Detail card */}
       <div className="bg-white rounded-xl border border-gray-200 px-8 py-6 mb-6">
+
         {/* Top meta */}
         <div className="grid grid-cols-2 gap-y-2 mb-6">
-          <p className="text-[13px] text-gray-500">Date & Time: <span className="text-gray-800 font-medium">{tx.dateTime}</span></p>
+          <p className="text-[13px] text-gray-500">
+            Date & Time: <span className="text-gray-800 font-medium">{formatDateTime(order.createdAt)}</span>
+          </p>
           <div className="flex items-center justify-end gap-2">
             <span className="text-[13px] text-gray-500">Status:</span>
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium border ${STATUS_STYLES[tx.status]}`}>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium border ${STATUS_STYLES[status] ?? ''}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-current" />
-              {tx.status}
+              {status}
             </span>
           </div>
           <p className="text-[13px] text-gray-500">
-            Transaction ID: <span className="text-gray-800 font-medium">{tx.transactionId}</span>
+            Order number: <span className="text-gray-800 font-medium">{order.orderNumber}</span>
           </p>
           <p className="text-[13px] text-gray-500 text-right">
-            Total Amount Paid: <span className="text-gray-800 font-semibold">₦{tx.totalAmountPaid.toLocaleString()}</span>
+            Total Amount Paid: <span className="text-gray-800 font-semibold">₦{order.totalAmount?.toLocaleString()}</span>
           </p>
           <div className="flex items-center gap-2 text-[13px] text-gray-500">
             Payment Gateway:
-            <span className="px-2 py-0.5 border border-gray-300 rounded text-[12px] text-gray-700">{tx.gateway}</span>
+            <span className="px-2 py-0.5 border border-gray-300 rounded text-[12px] text-gray-700">{gateway}</span>
           </div>
         </div>
 
@@ -61,8 +108,14 @@ export default function TransactionDetailPage() {
 
         {/* Attendee */}
         <Section label="Attendee">
-          <Row left={<Field label="First name" value={tx.attendee.firstName} />} right={<Field label="Last name" value={tx.attendee.lastName} />} />
-          <Row left={<Field label="Email address" value={tx.attendee.email} />} right={<Field label="Phone number" value={tx.attendee.phone} />} />
+          <Row
+            left={<Field label="First name" value={order.guest.firstName} />}
+            right={<Field label="Last name" value={order.guest.lastName} />}
+          />
+          <Row
+            left={<Field label="Email address" value={order.guest.email} />}
+            right={<Field label="Phone number" value={order.guest.phone} />}
+          />
         </Section>
 
         <div className="border-t border-gray-100 mb-5" />
@@ -70,13 +123,15 @@ export default function TransactionDetailPage() {
         {/* Ticket */}
         <Section label="Ticket">
           <Row
-            left={<Field label="Event name" value={tx.ticket.eventName} />}
+            left={<Field label="Event ID" value={order.eventId} />}
             right={
-              <div className="flex items-center gap-2 text-[13px] text-gray-500">
+              <div className="flex items-center gap-2 text-[13px] text-gray-500 flex-wrap">
                 Ticket type:
-                <span className="px-2.5 py-0.5 border border-blue-200 rounded-full text-[11px] text-blue-600 bg-blue-50 font-medium">
-                  {tx.ticket.ticketType}
-                </span>
+                {ticketTypes.map((t) => (
+                  <span key={t} className="px-2.5 py-0.5 border border-blue-200 rounded-full text-[11px] text-blue-600 bg-blue-50 font-medium">
+                    {t}
+                  </span>
+                ))}
               </div>
             }
           />
@@ -86,27 +141,27 @@ export default function TransactionDetailPage() {
 
         {/* Payment Summary */}
         <Section label="Payment Summary">
-          {tx.paymentSummary.mealTicket && (
+          {(order.mealTotal ?? 0) > 0 && (
             <div className="flex items-center justify-between py-1">
               <span className="text-[13px] text-gray-500">Meal ticket:</span>
-              <span className="text-[13px] text-gray-800 font-medium">₦{tx.paymentSummary.mealTicket.toLocaleString()}</span>
+              <span className="text-[13px] text-gray-800 font-medium">₦{order.mealTotal?.toLocaleString()}</span>
             </div>
           )}
-          {tx.paymentSummary.accommodationTicket && (
+          {(order.accommodationTotal ?? 0) > 0 && (
             <div className="flex items-center justify-between py-1">
               <span className="text-[13px] text-gray-500">Accommodation ticket:</span>
-              <span className="text-[13px] text-gray-800 font-medium">₦{tx.paymentSummary.accommodationTicket.toLocaleString()}</span>
+              <span className="text-[13px] text-gray-800 font-medium">₦{order.accommodationTotal?.toLocaleString()}</span>
             </div>
           )}
-          {tx.paymentSummary.transportTicket && (
+          {(order.transportTotal ?? 0) > 0 && (
             <div className="flex items-center justify-between py-1">
               <span className="text-[13px] text-gray-500">Transport ticket:</span>
-              <span className="text-[13px] text-gray-800 font-medium">₦{tx.paymentSummary.transportTicket.toLocaleString()}</span>
+              <span className="text-[13px] text-gray-800 font-medium">₦{order.transportTotal?.toLocaleString()}</span>
             </div>
           )}
           <div className="flex items-center justify-between py-1">
             <span className="text-[13px] text-gray-500">Total amount paid:</span>
-            <span className="text-[13px] text-gray-800 font-semibold">₦{tx.paymentSummary.totalAmountPaid.toLocaleString()}</span>
+            <span className="text-[13px] text-gray-800 font-semibold">₦{order.totalAmount?.toLocaleString()}</span>
           </div>
         </Section>
 
@@ -115,9 +170,12 @@ export default function TransactionDetailPage() {
         {/* Payment */}
         <Section label="Payment">
           <Row
-            left={<Field label="Method" value={tx.paymentMethod} />}
-            right={<Field label="Reference" value={tx.paymentReference} />}
+            left={<Field label="Method" value={gateway} />}
+            right={<Field label="Reference" value={order.paystackReference ?? order.paymentReference ?? '—'} />}
           />
+          {order.paidAt && (
+            <Field label="Paid at" value={formatDateTime(order.paidAt)} />
+          )}
         </Section>
       </div>
 
@@ -128,33 +186,33 @@ export default function TransactionDetailPage() {
           disabled={!!downloading}
           className="flex items-center gap-2 px-5 py-2.5 bg-[#3b5bdb] text-white rounded-lg text-[14px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60 whitespace-nowrap"
         >
-          <Download size={15} />
+          <Download size={15} className="flex-shrink-0" />
           {downloading ? 'Downloading...' : 'Download receipt'}
         </button>
 
         {showDownloadMenu && !downloading && (
-          <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-43.75 z-10">
+          <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[175px] z-10">
             <button
               onClick={() => { setShowDownloadMenu(false); downloadPDF(filename) }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
-              <FileText size={14} className="text-gray-400" />
+              <FileText size={14} className="text-gray-400 flex-shrink-0" />
               Download as PDF
             </button>
             <button
               onClick={() => { setShowDownloadMenu(false); downloadImage(filename) }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
-              <Image size={14} className="text-gray-400" />
+              <Image size={14} className="text-gray-400 flex-shrink-0" />
               Download as Image
             </button>
           </div>
         )}
       </div>
 
-      {/* Hidden receipt for html2canvas capture */}
-      <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1, pointerEvents: "none" }}>
-        <Receipt ref={receiptRef} transaction={tx} />
+      {/* Hidden receipt for capture */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1, pointerEvents: 'none' }}>
+        <Receipt ref={receiptRef} order={order} />
       </div>
     </div>
   )
@@ -170,12 +228,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 function Row({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between">
-      {left}
-      {right}
-    </div>
-  )
+  return <div className="flex items-center justify-between">{left}{right}</div>
 }
 
 function Field({ label, value }: { label: string; value: string }) {

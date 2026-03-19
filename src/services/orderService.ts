@@ -61,7 +61,7 @@ export async function getAllOrders(): Promise<{ orders: OrderData[]; pagination:
 
 export async function getOrderById(id: string): Promise<OrderData> {
   const { data } = await api.get(`/orders/${id}`)
-  return data.order ?? data.data ?? data
+  return data?.data?.order ?? data?.order ?? data?.data ?? data
 }
 
 // Derive ticket types from order contents

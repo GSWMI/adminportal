@@ -7,8 +7,6 @@ import StepOptions from './steps/StepOptions'
 import StepRegistrationForm from './steps/StepRegistrationForm'
 import StepReviewDetails from './steps/StepReviewDetails'
 import StepPublish from './steps/StepPublish'
-
-// import StepEventInfo from '../../steps/StepEventInfo'
 import { toast } from 'sonner'
 
 const STEPS = [
@@ -22,7 +20,7 @@ const STEPS = [
 
 function canProceed(step: number, form: ReturnType<typeof useTicketStore.getState>['form']): boolean {
   switch (step) {
-    case 0: return !!form.programName.trim() && !!form.startDate
+    case 0: return !!form.programName.trim() && !!form.startDate && !!form.endDate && form.totalDays >= 1
     case 1: return !!form.ticketType
     case 2: return form.days.some((d) => d.slots.some((s) => s.options.length > 0))
     case 3: return true // Registration form is optional beyond defaults
@@ -58,7 +56,7 @@ export default function NewTicketPage() {
   }
 
   return (
-    <div className="max-w-250">
+    <div className="max-w-[1000px]">
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -80,7 +78,7 @@ export default function NewTicketPage() {
 
       <div className="flex gap-8">
         {/* Left stepper */}
-        <div className="w-55 shrink-0">
+        <div className="w-[220px] flex-shrink-0">
           <div className="flex flex-col gap-1">
             {STEPS.map((step, i) => {
               const isCompleted = completedSteps.includes(i)
@@ -109,7 +107,7 @@ export default function NewTicketPage() {
                   </span>
 
                   {isCompleted ? (
-                    <span className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
                       <Check size={11} className="text-white" strokeWidth={3} />
                     </span>
                   ) : (

@@ -11,6 +11,21 @@ interface LoginResult {
   user: AuthUser
 }
 
+function mapProfile(profileData: Record<string, unknown>): AuthUser {
+  // API returns { success: true, data: { admin: { firstName, lastName, email, id, role } } }
+  const data = profileData.data as Record<string, unknown> ?? profileData
+  const profile = data.admin as Record<string, unknown> ?? data
+
+  return {
+    id: profile.id as string ?? profile._id as string ?? '',
+    username: profile.firstName
+      ? `${profile.firstName} ${profile.lastName}`
+      : profile.email as string ?? '',
+    email: profile.email as string ?? '',
+    avatar: profile.avatar as string ?? undefined,
+  }
+}
+
 export async function loginUser({ email, password }: LoginPayload): Promise<LoginResult> {
   const { data: loginData } = await api.post('/auth/login', { email, password })
 
@@ -22,30 +37,10 @@ export async function loginUser({ email, password }: LoginPayload): Promise<Logi
     headers: { Authorization: `Bearer ${token}` },
   })
 
-  const profile = profileData.data ?? profileData
-
-  const user: AuthUser = {
-    id: profile._id ?? profile.id ?? '',
-    username: profile.firstName
-      ? `${profile.firstName} ${profile.lastName}`
-      : profile.email,
-    email: profile.email,
-    avatar: profile.avatar ?? undefined,
-  }
-
-  return { token, user }
+  return { token, user: mapProfile(profileData) }
 }
 
 export async function fetchProfile(): Promise<AuthUser> {
   const { data } = await api.get('/auth/profile')
-  const profile = data.data ?? data
-
-  return {
-    id: profile._id ?? profile.id ?? '',
-    username: profile.firstName
-      ? `${profile.firstName} ${profile.lastName}`
-      : profile.email,
-    email: profile.email,
-    avatar: profile.avatar ?? undefined,
-  }
+  return mapProfile(data)
 }

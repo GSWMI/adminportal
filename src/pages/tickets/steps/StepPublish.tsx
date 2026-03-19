@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Timer, Copy, ExternalLink, ArrowLeft } from 'lucide-react'
+import { Timer, Copy, ExternalLink, ArrowLeft, Loader2 } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
+import { createEvent } from '../../../services/eventService'
+import { mapFormToEventPayload, validateEventForm } from '../../../validations/eventValidation'
 import { toast } from 'sonner'
 
 interface Props {
@@ -11,23 +13,36 @@ interface Props {
 export default function StepPublish({ onPreview }: Props) {
   const [published, setPublished] = useState(false)
   const [loading, setLoading] = useState(false)
+  
   const { form, reset } = useTicketStore()
   const navigate = useNavigate()
 
-  // Generate slug from program name
-  const slug = form.programName
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/[^a-z0-9]/g, '')
-
+  const slug = form.programName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
   const ticketUrl = `https://logistics.gswmi.com/${slug}`
 
   const handlePublish = async () => {
+    // Validate before calling API
+    const error = validateEventForm(form)
+    if (error) {
+      toast.error(error)
+      return
+    }
+
     setLoading(true)
-    // TODO: replace with real API call
-    await new Promise((r) => setTimeout(r, 1500))
-    setLoading(false)
-    setPublished(true)
+    try {
+      const payload = mapFormToEventPayload(form)
+      await createEvent(payload)
+      
+      setPublished(true)
+      toast.success('Ticket published successfully!')
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message ?? 'Failed to publish ticket'
+      toast.error(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCopy = () => {
@@ -40,41 +55,26 @@ export default function StepPublish({ onPreview }: Props) {
       <div className="flex flex-col items-center text-center py-4">
         <h2 className="text-[16px] font-semibold text-gray-900 mb-6">Ticket published successfully</h2>
 
-        {/* Share */}
         <p className="text-[13px] text-gray-500 mb-4">Share with</p>
         <div className="flex items-center gap-5 mb-6">
-          <ShareBtn
-            href={`https://mail.google.com/mail/?view=cm&body=${encodeURIComponent(ticketUrl)}`}
-            label="Gmail"
-            bg="bg-red-50"
-          >
+          <ShareBtn href={`https://mail.google.com/mail/?view=cm&body=${encodeURIComponent(ticketUrl)}`} label="Gmail" bg="bg-red-50">
             <GmailIcon />
           </ShareBtn>
-          <ShareBtn
-            href={`https://wa.me/?text=${encodeURIComponent(ticketUrl)}`}
-            label="Whatsapp"
-            bg="bg-green-50"
-          >
+          <ShareBtn href={`https://wa.me/?text=${encodeURIComponent(ticketUrl)}`} label="Whatsapp" bg="bg-green-50">
             <WhatsappIcon />
           </ShareBtn>
-          <ShareBtn
-            href={`https://t.me/share/url?url=${encodeURIComponent(ticketUrl)}`}
-            label="Telegram"
-            bg="bg-blue-50"
-          >
+          <ShareBtn href={`https://t.me/share/url?url=${encodeURIComponent(ticketUrl)}`} label="Telegram" bg="bg-blue-50">
             <TelegramIcon />
           </ShareBtn>
         </div>
 
-        {/* URL */}
         <div className="flex items-center gap-2 w-full border border-gray-200 rounded-lg px-3 py-2.5 mb-4 bg-gray-50">
           <span className="flex-1 text-[13px] text-gray-600 truncate">{ticketUrl}</span>
-          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors shrink-0">
+          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
             <Copy size={15} />
           </button>
         </div>
 
-        {/* Actions */}
         <a
           href={ticketUrl}
           target="_blank"
@@ -83,12 +83,13 @@ export default function StepPublish({ onPreview }: Props) {
         >
           View ticket page <ExternalLink size={13} />
         </a>
+
         <button
-          onClick={() => { reset(); navigate('/dashboard') }}
+          onClick={() => { reset(); navigate('/tickets') }}
           className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-gray-700 transition-colors"
         >
           <ArrowLeft size={13} />
-          Back to dashboard
+          Back to tickets
         </button>
       </div>
     )
@@ -109,7 +110,8 @@ export default function StepPublish({ onPreview }: Props) {
         {!published && (
           <button
             onClick={onPreview}
-            className="px-5 py-2.5 bg-[#3b5bdb] text-white rounded-lg text-[14px] font-medium hover:bg-[#3451c7] transition-colors"
+            disabled={loading}
+            className="px-5 py-2.5 bg-[#3b5bdb] text-white rounded-lg text-[14px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60"
           >
             Preview page
           </button>
@@ -117,8 +119,9 @@ export default function StepPublish({ onPreview }: Props) {
         <button
           onClick={handlePublish}
           disabled={loading}
-          className="px-5 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg text-[14px] font-medium hover:bg-gray-50 transition-colors disabled:opacity-60"
+          className="px-5 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg text-[14px] font-medium hover:bg-gray-50 transition-colors disabled:opacity-60 flex items-center gap-2"
         >
+          {loading && <Loader2 size={14} className="animate-spin" />}
           {loading ? 'Publishing...' : 'Publish page'}
         </button>
       </div>

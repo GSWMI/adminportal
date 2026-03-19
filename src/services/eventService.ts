@@ -24,28 +24,28 @@ export interface EventData {
 
 export async function getAllEvents(): Promise<EventData[]> {
   const { data } = await api.get('/events/')
-  // API returns a single event object OR an array — normalise to array
+  // API returns { success: true, data: { events: [...] } }
+  if (Array.isArray(data?.data?.events)) return data.data.events
+  if (Array.isArray(data?.events)) return data.events
+  if (Array.isArray(data?.data)) return data.data
   if (Array.isArray(data)) return data
-  if (Array.isArray(data.events)) return data.events
-  if (Array.isArray(data.data)) return data.data
-  // Single event object returned
-  if (data._id) return [data]
+  if (data?._id) return [data]
   return []
 }
 
 export async function getEventById(id: string): Promise<EventData> {
   const { data } = await api.get(`/events/${id}`)
-  return data.event ?? data.data ?? data
+  return data?.data?.event ?? data?.data ?? data?.event ?? data
 }
 
 export async function createEvent(payload: Partial<EventData>): Promise<EventData> {
   const { data } = await api.post('/events/', payload)
-  return data.event ?? data.data ?? data
+  return data?.data?.event ?? data?.data ?? data?.event ?? data
 }
 
 export async function updateEvent(id: string, payload: Partial<EventData>): Promise<EventData> {
   const { data } = await api.put(`/events/${id}`, payload)
-  return data.event ?? data.data ?? data
+  return data?.data?.event ?? data?.data ?? data?.event ?? data
 }
 
 export async function updateRegistration(
