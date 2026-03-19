@@ -1,13 +1,13 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'https://gswmi-backend.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Attach JWT token to every request
+// Attach JWT token to every request automatically
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('gswmi_token')
   if (token) {

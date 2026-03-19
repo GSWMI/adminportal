@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
-
-// import ProtectedRoute from './components/ProtectedRoute'
+import ProtectedRoute from './components/ProtectedRoute'
 import DashboardLayout from './components/layout/DashboardLayout'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -25,15 +24,15 @@ export default function App() {
 
           {/* Ticket preview — full page outside admin layout */}
           <Route path="/tickets/preview" element={
-       //     <ProtectedRoute>
+         <ProtectedRoute>
               <TicketPreviewPage />
-          //     </ProtectedRoute>
+         </ProtectedRoute>
             } />
 
           <Route path="/" element={
-          //     <ProtectedRoute>
+           <ProtectedRoute>
               <DashboardLayout />
-         //      </ProtectedRoute>
+            </ProtectedRoute>
           }>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
