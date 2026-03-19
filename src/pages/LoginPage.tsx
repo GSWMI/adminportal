@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useFormik } from 'formik'
 import { toast } from 'sonner'
@@ -9,9 +9,10 @@ import { loginUser } from '../services/authService'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
+  // All hooks must be called before any early return
   const formik = useFormik({
     initialValues: loginInitialValues,
     validationSchema: loginSchema,
@@ -34,6 +35,11 @@ export default function LoginPage() {
     },
   })
 
+  // Early return AFTER all hooks
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   const isFilled = formik.values.email.trim() !== '' && formik.values.password.trim() !== ''
 
   return (
@@ -43,7 +49,7 @@ export default function LoginPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-85">
+        <div className="w-full max-w-[340px]">
           <div className="text-center mb-8">
             <h1 className="text-[22px] font-semibold text-gray-900 mb-1">
               Welcome to GSWMI Ticketing Portal

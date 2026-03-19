@@ -1,32 +1,58 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Ticket, UserPlus, MoreVertical, ArrowUpRight, FileText } from 'lucide-react'
 import StatusBadge from '../components/ui/StatusBadge'
 import TicketTypeBadge from '../components/ui/TicketTypeBadge'
 import AddUserModal from '../components/AddUserModal'
+import { getAllEvents, type EventData } from '../services/eventService'
+import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
-// Mock data — replace with API calls later
-const mockStats = {
-  ticketsCreated: 1,
-  activeTickets: 1,
-  inactiveTickets: 0,
+function formatDate(dateStr: string) {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  })
 }
-
-const mockTransactions = [
-  { id: '1', attendee: 'Sienna Hewitt', email: 'hi@siennahewitt.com', date: 'Jan 16, 2025', ticketType: 'Meal', gateway: 'Paystack', amount: '₦65,000', status: 'Pending' },
-  { id: '2', attendee: 'Ammar Foley', email: 'ammarfoley@gmail.com', date: 'Jan 16, 2025', ticketType: 'Meal', gateway: 'Paystack', amount: '₦65,000', status: 'Pending' },
-  { id: '3', attendee: 'Pippa Wilkinson', email: 'pippa@pippaw.com', date: 'Jan 15, 2025', ticketType: 'Meal', gateway: 'Paystack', amount: '₦65,000', status: 'Successful' },
-  { id: '4', attendee: 'Pippa Wilkinson', email: 'pippa@pippaw.com', date: 'Jan 15, 2025', ticketType: 'Meal', gateway: 'Paystack', amount: '₦65,000', status: 'Successful' },
-  { id: '5', attendee: 'Pippa Wilkinson', email: 'pippa@pippaw.com', date: 'Jan 15, 2025', ticketType: 'Meal', gateway: 'Paystack', amount: '₦65,000', status: 'Successful' },
-  { id: '6', attendee: 'Olly Schroeder', email: 'olly_s@icloud.com', date: '16 Jan 2025', ticketType: 'Meal', gateway: 'Flutterwave', amount: '₦65,000', status: 'Cancelled' },
-  { id: '7', attendee: 'Mathilde Lewis', email: 'mathilde@hey.com', date: '16 Jan 2025', ticketType: 'Meal', gateway: 'Flutterwave', amount: '₦65,000', status: 'Cancelled' },
-]
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [showAddUser, setShowAddUser] = useState(false)
-  const hasTransactions = mockTransactions.length > 0
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [events, setEvents] = useState<EventData[]>([])
+  const [orders, setOrders] = useState<OrderData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const [eventsData, ordersResult] = await Promise.all([
+          getAllEvents(),
+          getAllOrders(),
+        ])
+        setEvents(eventsData)
+        setOrders(Array.isArray(ordersResult.orders) ? ordersResult.orders : [])
+      } catch (err) {
+        console.error('Dashboard fetch error:', err)
+        setError('Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  // Stat cards — derived from events
+  const ticketsCreated = events.length
+  const activeTickets = events.filter((e) => e.registrationOpen).length
+  const inactiveTickets = events.filter((e) => !e.registrationOpen).length
+
+  // Show most recent 7 orders
+  const recentOrders = orders.slice(0, 7)
+  const hasOrders = orders.length > 0
 
   return (
     <div className="max-w-[1100px]">
@@ -34,9 +60,9 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard label="Tickets created" value={mockStats.ticketsCreated} />
-        <StatCard label="Active tickets" value={mockStats.activeTickets} />
-        <StatCard label="Inactive tickets" value={mockStats.inactiveTickets} />
+        <StatCard label="Tickets created" value={ticketsCreated} loading={loading} />
+        <StatCard label="Active tickets" value={activeTickets} loading={loading} />
+        <StatCard label="Inactive tickets" value={inactiveTickets} loading={loading} />
       </div>
 
       {/* Quick Actions */}
@@ -64,18 +90,21 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-[15px] font-semibold text-gray-900">Transactions</h2>
-          {hasTransactions && (
+          {hasOrders && (
             <button
               onClick={() => navigate('/transactions')}
               className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 transition-all hover:bg-gray-50"
             >
-              View all
-              <ArrowUpRight size={13} />
+              View all <ArrowUpRight size={13} />
             </button>
           )}
         </div>
 
-        {!hasTransactions ? (
+        {loading ? (
+          <TableSkeleton />
+        ) : error ? (
+          <div className="py-12 text-center text-[13px] text-red-400">{error}</div>
+        ) : !hasOrders ? (
           <EmptyTransactions />
         ) : (
           <div className="overflow-x-auto">
@@ -99,51 +128,85 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {mockTransactions.map((tx) => (
-                  <tr key={tx.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <p className="text-[13px] font-medium text-gray-900">{tx.attendee}</p>
-                      <p className="text-[12px] text-gray-400">{tx.email}</p>
-                    </td>
-                    <td className="px-5 py-3.5 text-[13px] text-gray-600 whitespace-nowrap">{tx.date}</td>
-                    <td className="px-5 py-3.5"><TicketTypeBadge type={tx.ticketType} /></td>
-                    <td className="px-5 py-3.5 text-[13px] text-gray-600">{tx.gateway}</td>
-                    <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900 whitespace-nowrap">{tx.amount}</td>
-                    <td className="px-5 py-3.5"><StatusBadge status={tx.status} /></td>
-                    <td className="px-3 py-3.5 relative">
-                      <button
-                        onClick={() => setOpenMenuId(openMenuId === tx.id ? null : tx.id)}
-                        className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400"
-                      >
-                        <MoreVertical size={15} />
-                      </button>
-                      {openMenuId === tx.id && (
-                        <div className="absolute right-4 top-10 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
-                          <button className="w-full text-left px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50">View details</button>
-                          <button className="w-full text-left px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50">Edit</button>
-                          <button className="w-full text-left px-3 py-2 text-[13px] text-red-500 hover:bg-red-50">Delete</button>
+                {recentOrders.map((order) => {
+                  const ticketTypes = getTicketTypes(order)
+                  return (
+                    <tr key={order._id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <p className="text-[13px] font-medium text-gray-900">
+                          {order.guest.firstName} {order.guest.lastName}
+                        </p>
+                        <p className="text-[12px] text-gray-400">{order.guest.email}</p>
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-600 whitespace-nowrap">
+                        {formatDate(order.createdAt)}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {ticketTypes.map((t) => (
+                            <TicketTypeBadge key={t} type={t} />
+                          ))}
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-600">
+                        {order.paystackReference ? 'Paystack' : '—'}
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900 whitespace-nowrap">
+                        ₦{order.totalAmount?.toLocaleString() ?? '—'}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <StatusBadge status={mapPaymentStatus(order)} />
+                      </td>
+                      <td className="px-3 py-3.5 relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === order._id ? null : order._id)}
+                          className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400"
+                        >
+                          <MoreVertical size={15} />
+                        </button>
+                        {openMenuId === order._id && (
+                          <div className="absolute right-4 bottom-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[130px]">
+                            <button
+                              onClick={() => { setOpenMenuId(null); navigate(`/transactions/${order._id}`) }}
+                              className="w-full text-left px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                            >
+                              View details
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Add User Modal */}
       {showAddUser && <AddUserModal onClose={() => setShowAddUser(false)} />}
     </div>
   )
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, loading }: { label: string; value: number; loading: boolean }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 px-5 py-5">
       <p className="text-[13px] text-gray-500 mb-1">{label}</p>
-      <p className="text-[28px] font-semibold text-gray-900">{value}</p>
+      {loading
+        ? <Skeleton height={36} width={60} />
+        : <p className="text-[28px] font-semibold text-gray-900">{value}</p>
+      }
+    </div>
+  )
+}
+
+function TableSkeleton() {
+  return (
+    <div className="px-5 py-4 flex flex-col gap-4">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} height={24} />
+      ))}
     </div>
   )
 }
