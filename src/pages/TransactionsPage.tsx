@@ -1,48 +1,10 @@
-import { Download } from "lucide-react";
-import PrimaryButton from "../components/common/PrimaryButton";
-import RecordsEmptyState from "../components/common/RecordsEmptyState";
-import SectionCard from "../components/common/SectionCard";
-import AppShell from "../components/layouts/AppShell";
-import PageHeader from "../components/layouts/PageHeader";
-import TransactionsTable from "../components/transactions/TransactionsTable";
-import TransactionsToolbar from "../components/transactions/TransactionsToolbar";
-import { transactionRecords } from "../data/transactions";
-import TablePagination from "../components/common/TablePagination";
-
-type TransactionsPageProps = {
-  showFilledState?: boolean;
-};
-
-function TransactionsPage({
-  showFilledState = false,
-}: TransactionsPageProps) {
+export default function TransactionsPage() {
   return (
-    <AppShell>
-      <div className="flex items-start justify-between gap-4">
-        <PageHeader title="Transactions" />
-
-        {showFilledState ? (
-          <div className="pt-2">
-            <PrimaryButton label="Export" icon={Download} />
-          </div>
-        ) : null}
+    <div>
+      <h1 className="text-[22px] font-semibold text-gray-900 mb-6">Transactions</h1>
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400 text-[13px]">
+        Coming soon
       </div>
-
-      {!showFilledState ? (
-        <div className="mt-6">
-          <RecordsEmptyState message="No transaction records yet" />
-        </div>
-      ) : (
-        <div className="mt-8">
-          <SectionCard title="" allowOverflow>
-            <TransactionsToolbar />
-            <TransactionsTable records={transactionRecords} />
-             <TablePagination pageLabel="Page 1 of 1" />
-          </SectionCard>
-        </div>
-      )}
-    </AppShell>
-  );
+    </div>
+  )
 }
-
-export default TransactionsPage;

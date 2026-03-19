@@ -1,82 +1,155 @@
-import { useMemo, useState, } from "react";
-import { EyeOff, Lock, User } from "lucide-react";
-import LoginInput from "../components/LoginInput";
-// import GSWMILogo from "../assets/logo.png"
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useFormik } from 'formik'
+import * as Yup from 'yup'
+import { toast } from 'sonner'
+import { useAuth } from '../hooks/useAuth'
+import api from '../lib/axios'
 
-function LoginPage() {
-  const [username, setUsername] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
+const loginSchema = Yup.object({
+  username: Yup.string().required('Username is required'),
+  password: Yup.string().required('Password is required'),
+})
 
-  const isFormValid = useMemo(() => {
-    return username.trim() !== "" && password.trim() !== "";
-  }, [username, password]);
+export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false)
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
+  const formik = useFormik({
+    initialValues: { username: '', password: '' },
+    validationSchema: loginSchema,
+    validateOnChange: false,
+    validateOnBlur: true,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        // TODO: replace endpoint with real one
+        const { data } = await api.post('/auth/login', {
+          username: values.username,
+          password: values.password,
+        })
+        login(data.token, data.user)
+        toast.success('Welcome back!')
+        navigate('/dashboard')
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          'Invalid username or password'
+        toast.error(message)
+      } finally {
+        setSubmitting(false)
+      }
+    },
+  })
+
+  const isFilled = formik.values.username.trim() !== '' && formik.values.password.trim() !== ''
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F3F4F6]">
-      <header className="flex h-25 items-center justify-center bg-[#0C2039] px-4">
-        <div className="text-center text-white">
-          <h1 className="text-[44px] font-medium leading-none tracking-tight">
-            GSWMI
-          </h1>
-          <p className="mt-1 text-[8px] leading-none opacity-95">
-            Gbenga Samuel Weimino Ministry International
-          </p>
-        </div>
+    <div className="min-h-screen flex flex-col bg-white">
+      <header className="bg-[#0d1b2a] py-4 px-6 flex items-center justify-center">
+        <GswmiLogo />
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4 py-10">
-        <div className="w-full max-w-87.5">
-          <div className="text-center">
-            <h2 className="text-[18px] font-semibold text-black">
+      <main className="flex-1 flex items-center justify-center px-4">
+        <div className="w-full max-w-[340px]">
+          <div className="text-center mb-8">
+            <h1 className="text-[22px] font-semibold text-gray-900 mb-1">
               Welcome to GSWMI Ticketing Portal
-            </h2>
-            <p className="mt-2 text-[16px] text-[#6B7280]">Login to continue</p>
+            </h1>
+            <p className="text-[15px] text-gray-500">Login to continue</p>
           </div>
 
-          <form className="mt-10 space-y-6" onSubmit={handleSubmit}>
-            <LoginInput
-              label="Username"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              leftIcon={User}
-            />
+          <form onSubmit={formik.handleSubmit} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[14px] font-medium text-gray-700">Username</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <User size={16} />
+                </span>
+                <input
+                  type="text"
+                  name="username"
+                  value={formik.values.username}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  placeholder="Enter your username"
+                  className={`w-full pl-9 pr-4 py-2.5 rounded-lg border text-[14px] text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 transition-all ${
+                    formik.touched.username && formik.errors.username
+                      ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-300 focus:border-[#3b5bdb] focus:ring-[#3b5bdb]/20'
+                  }`}
+                />
+              </div>
+              {formik.touched.username && formik.errors.username && (
+                <p className="text-[12px] text-red-500">{formik.errors.username}</p>
+              )}
+            </div>
 
-            <LoginInput
-              label="Password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              leftIcon={Lock}
-              rightIcon={EyeOff}
-              isFocused={password.length > 0}
-            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[14px] font-medium text-gray-700">Password</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Lock size={16} />
+                </span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  placeholder="Enter your password"
+                  className={`w-full pl-9 pr-10 py-2.5 rounded-lg border text-[14px] text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 transition-all ${
+                    formik.touched.password && formik.errors.password
+                      ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-300 focus:border-[#3b5bdb] focus:ring-[#3b5bdb]/20'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
+                </button>
+              </div>
+              {formik.touched.password && formik.errors.password && (
+                <p className="text-[12px] text-red-500">{formik.errors.password}</p>
+              )}
+            </div>
 
             <button
               type="submit"
-              disabled={!isFormValid}
-              className={`h-12 w-full rounded-lg text-[16px] font-semibold transition ${
-                isFormValid
-                  ? "cursor-pointer bg-[#3867D6] text-white"
-                  : "cursor-not-allowed border border-[#D1D5DB] bg-[#E5E7EB] text-[#9CA3AF]"
+              disabled={!isFilled || formik.isSubmitting}
+              className={`w-full py-2.5 rounded-lg text-[15px] font-medium flex items-center justify-center gap-2 transition-all ${
+                isFilled && !formik.isSubmitting
+                  ? 'bg-[#3b5bdb] text-white hover:bg-[#3451c7] cursor-pointer'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
+              {formik.isSubmitting && <Loader2 size={16} className="animate-spin" />}
               Login
             </button>
           </form>
         </div>
       </main>
 
-      <footer className="flex h-12 items-center justify-center bg-[#E5E7EB] px-4">
-        <p className="text-[14px] text-[#4B5563]">© GSWMI Logistics Team</p>
+      <footer className="bg-gray-100 py-3 text-center text-[13px] text-gray-500">
+        © GSWMI Logistics Team
       </footer>
     </div>
-  );
+  )
 }
 
-export default LoginPage;
+function GswmiLogo() {
+  return (
+    <div className="flex flex-col items-center">
+      <span className="text-white text-2xl font-bold tracking-wide font-serif italic">
+        ╱GSWMI
+      </span>
+      <span className="text-white/60 text-[9px] tracking-widest uppercase">
+        Gbenga Samuel-Wemimo Ministry International
+      </span>
+    </div>
+  )
+}
