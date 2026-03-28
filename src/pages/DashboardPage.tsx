@@ -4,7 +4,7 @@ import { Ticket, UserPlus, MoreVertical, ArrowUpRight, FileText } from 'lucide-r
 import StatusBadge from '../components/ui/StatusBadge'
 import TicketTypeBadge from '../components/ui/TicketTypeBadge'
 import AddUserModal from '../components/AddUserModal'
-import { getAllEvents, type EventData } from '../services/eventService'
+import { getAllEvents, getDashboardStats } from '../services/eventService'
 import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -16,12 +16,26 @@ function formatDate(dateStr: string) {
   })
 }
 
+interface DashboardStats {
+  ticketsCreated: number
+  totalOrders: number
+  totalRevenue: number
+  paidOrders: number
+  pendingOrders: number
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate()
   const [showAddUser, setShowAddUser] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [events, setEvents] = useState<EventData[]>([])
   const [orders, setOrders] = useState<OrderData[]>([])
+  const [stats, setStats] = useState<DashboardStats>({
+    ticketsCreated: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    paidOrders: 0,
+    pendingOrders: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,8 +47,37 @@ export default function DashboardPage() {
           getAllEvents(),
           getAllOrders(),
         ])
-        setEvents(eventsData)
-        setOrders(Array.isArray(ordersResult.orders) ? ordersResult.orders : [])
+
+        const fetchedOrders = Array.isArray(ordersResult.orders) ? ordersResult.orders : []
+        setOrders(fetchedOrders)
+
+        // Aggregate dashboard stats across all events
+        let totalOrders = 0
+        let totalRevenue = 0
+        let paidOrders = 0
+        let pendingOrders = 0
+
+        await Promise.allSettled(
+          eventsData.map(async (event) => {
+            try {
+              const s = await getDashboardStats(event._id)
+              totalOrders += (s.totalOrders as number) ?? 0
+              totalRevenue += (s.totalRevenue as number) ?? 0
+              paidOrders += (s.paidOrders as number) ?? 0
+              pendingOrders += (s.pendingOrders as number) ?? 0
+            } catch {
+              // skip failed event stats silently
+            }
+          })
+        )
+
+        setStats({
+          ticketsCreated: eventsData.length,
+          totalOrders,
+          totalRevenue,
+          paidOrders,
+          pendingOrders,
+        })
       } catch (err) {
         console.error('Dashboard fetch error:', err)
         setError('Failed to load dashboard data')
@@ -45,12 +88,6 @@ export default function DashboardPage() {
     fetchData()
   }, [])
 
-  // Stat cards — derived from events
-  const ticketsCreated = events.length
-  const activeTickets = events.filter((e) => e.registrationOpen).length
-  const inactiveTickets = events.filter((e) => !e.registrationOpen).length
-
-  // Show most recent 7 orders
   const recentOrders = orders.slice(0, 7)
   const hasOrders = orders.length > 0
 
@@ -60,9 +97,21 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard label="Tickets created" value={ticketsCreated} loading={loading} />
-        <StatCard label="Active tickets" value={activeTickets} loading={loading} />
-        <StatCard label="Inactive tickets" value={inactiveTickets} loading={loading} />
+        <StatCard label="Tickets created" value={stats.ticketsCreated} loading={loading} />
+        <StatCard label="Total orders" value={stats.totalOrders} loading={loading} />
+        <StatCard
+          label="Total revenue"
+          value={stats.totalRevenue}
+          loading={loading}
+          prefix="₦"
+          format="currency"
+        />
+      </div>
+
+      {/* Secondary stats */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <StatCard label="Paid orders" value={stats.paidOrders} loading={loading} accent="green" />
+        <StatCard label="Pending orders" value={stats.pendingOrders} loading={loading} accent="orange" />
       </div>
 
       {/* Quick Actions */}
@@ -189,13 +238,38 @@ export default function DashboardPage() {
   )
 }
 
-function StatCard({ label, value, loading }: { label: string; value: number; loading: boolean }) {
+function StatCard({
+  label, value, loading, prefix = '', format = 'number', accent,
+}: {
+  label: string
+  value: number
+  loading: boolean
+  prefix?: string
+  format?: 'number' | 'currency'
+  accent?: 'green' | 'orange'
+}) {
+  const accentClass = accent === 'green'
+    ? 'border-green-100 bg-green-50/40'
+    : accent === 'orange'
+    ? 'border-orange-100 bg-orange-50/40'
+    : ''
+
+  const valueClass = accent === 'green'
+    ? 'text-green-700'
+    : accent === 'orange'
+    ? 'text-orange-600'
+    : 'text-gray-900'
+
+  const displayValue = format === 'currency'
+    ? `${prefix}${value.toLocaleString()}`
+    : `${prefix}${value}`
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 px-5 py-5">
+    <div className={`bg-white rounded-xl border border-gray-200 px-5 py-5 ${accentClass}`}>
       <p className="text-[13px] text-gray-500 mb-1">{label}</p>
       {loading
-        ? <Skeleton height={36} width={60} />
-        : <p className="text-[28px] font-semibold text-gray-900">{value}</p>
+        ? <Skeleton height={36} width={80} />
+        : <p className={`text-[28px] font-semibold ${valueClass}`}>{displayValue}</p>
       }
     </div>
   )

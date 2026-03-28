@@ -10,18 +10,16 @@ interface Props {
   onPreview: () => void
 }
 
+const PUBLIC_BASE_URL = 'https://logistics.gswmi.com'
+
 export default function StepPublish({ onPreview }: Props) {
   const [published, setPublished] = useState(false)
   const [loading, setLoading] = useState(false)
-  
+  const [ticketUrl, setTicketUrl] = useState('')
   const { form, reset } = useTicketStore()
   const navigate = useNavigate()
 
-  const slug = form.programName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
-  const ticketUrl = `https://logistics.gswmi.com/${slug}`
-
   const handlePublish = async () => {
-    // Validate before calling API
     const error = validateEventForm(form)
     if (error) {
       toast.error(error)
@@ -31,8 +29,12 @@ export default function StepPublish({ onPreview }: Props) {
     setLoading(true)
     try {
       const payload = mapFormToEventPayload(form)
-      await createEvent(payload)
-      
+      const created = await createEvent(payload)
+
+      // Use slug from API response if available, fall back to generated one
+      const slug = created.slug ?? form.programName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      setTicketUrl(`${PUBLIC_BASE_URL}/events/s/${slug}`)
+
       setPublished(true)
       toast.success('Ticket published successfully!')
     } catch (err: unknown) {
@@ -70,7 +72,7 @@ export default function StepPublish({ onPreview }: Props) {
 
         <div className="flex items-center gap-2 w-full border border-gray-200 rounded-lg px-3 py-2.5 mb-4 bg-gray-50">
           <span className="flex-1 text-[13px] text-gray-600 truncate">{ticketUrl}</span>
-          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors shrink-0">
             <Copy size={15} />
           </button>
         </div>
@@ -107,15 +109,13 @@ export default function StepPublish({ onPreview }: Props) {
       <p className="text-[13px] text-gray-500 mb-8">Take a moment to preview the ticket page</p>
 
       <div className="flex items-center gap-3">
-        {!published && (
-          <button
-            onClick={onPreview}
-            disabled={loading}
-            className="px-5 py-2.5 bg-[#3b5bdb] text-white rounded-lg text-[14px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60"
-          >
-            Preview page
-          </button>
-        )}
+        <button
+          onClick={onPreview}
+          disabled={loading}
+          className="px-5 py-2.5 bg-[#3b5bdb] text-white rounded-lg text-[14px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60"
+        >
+          Preview page
+        </button>
         <button
           onClick={handlePublish}
           disabled={loading}

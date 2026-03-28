@@ -1,39 +1,73 @@
 import type { TicketFormData } from '../store/ticketStore'
 
+export interface MealOptionPayload {
+  name: string
+  price: number
+  limit?: number
+}
+
+export interface MealOptionGroupPayload {
+  day: number
+  slot: string
+  options: MealOptionPayload[]
+}
+
+export interface CustomQuestionPayload {
+  question: string
+  required: boolean
+}
+
 export interface EventApiPayload {
   name: string
   description: string
   startDate: string
   endDate: string
   totalDays: number
-  mealPrices: {
-    breakfast: number
-    lunch: number
-    dinner: number
-  }
+  location: string
+  bannerUrl: string
+  mealOptions: MealOptionGroupPayload[]
+  customQuestions: CustomQuestionPayload[]
+  consentText: string
   registrationOpen: boolean
   mealRegistrationOpen: boolean
   accommodationRegistrationOpen: boolean
   transportRegistrationOpen: boolean
 }
 
-// Strip HTML tags from rich text editor output for plain text description
+// Strip HTML tags from rich text editor output
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim()
 }
 
-// Derive a single price for each meal slot by averaging options in that slot across all days
-function deriveMealPrice(form: TicketFormData, slotName: string): number {
-  const prices: number[] = []
-  form.days.forEach((day) => {
-    const slot = day.slots.find((s) => s.name.toLowerCase() === slotName.toLowerCase())
-    if (slot) {
-      slot.options.forEach((opt) => prices.push(opt.price))
-    }
+// Map store days/slots/options to the new API mealOptions structure
+function mapMealOptions(form: TicketFormData): MealOptionGroupPayload[] {
+  const result: MealOptionGroupPayload[] = []
+
+  form.days.forEach((day, dayIndex) => {
+    day.slots.forEach((slot) => {
+      if (slot.options.length > 0) {
+        result.push({
+          day: dayIndex + 1,
+          slot: slot.name.toLowerCase(), // breakfast | lunch | dinner
+          options: slot.options.map((opt) => ({
+            name: opt.name,
+            price: opt.price,
+            ...(opt.limit > 0 ? { limit: opt.limit } : {}),
+          })),
+        })
+      }
+    })
   })
-  if (prices.length === 0) return 0
-  // Use the first price found — admin sets consistent prices per slot
-  return prices[0]
+
+  return result
+}
+
+// Map store customFields to API customQuestions
+function mapCustomQuestions(form: TicketFormData): CustomQuestionPayload[] {
+  return form.customFields.map((f) => ({
+    question: f.question,
+    required: f.required,
+  }))
 }
 
 export function mapFormToEventPayload(form: TicketFormData): EventApiPayload {
@@ -43,11 +77,11 @@ export function mapFormToEventPayload(form: TicketFormData): EventApiPayload {
     startDate: form.startDate,
     endDate: form.endDate,
     totalDays: form.totalDays,
-    mealPrices: {
-      breakfast: deriveMealPrice(form, 'Breakfast'),
-      lunch: deriveMealPrice(form, 'Lunch'),
-      dinner: deriveMealPrice(form, 'Dinner'),
-    },
+    location: form.location.trim(),
+    bannerUrl: form.bannerPreview || '',
+    mealOptions: mapMealOptions(form),
+    customQuestions: mapCustomQuestions(form),
+    consentText: stripHtml(form.consentText) || form.consentText,
     registrationOpen: true,
     mealRegistrationOpen: form.ticketType === 'Meal',
     accommodationRegistrationOpen: form.ticketType === 'Accommodation',

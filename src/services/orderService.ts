@@ -86,3 +86,7 @@ export function mapPaymentStatus(order: OrderData): string {
   }
   return map[raw.toLowerCase()] ?? raw
 }
+
+export async function resendTicket(orderId: string): Promise<void> {
+  await api.post(`/orders/${orderId}/resend-ticket`)
+}
