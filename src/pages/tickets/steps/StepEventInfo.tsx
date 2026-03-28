@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Calendar, MapPin, ImageIcon, ExternalLink, Hash } from 'lucide-react'
+import { Calendar, MapPin, ImageIcon, ExternalLink, Hash, Link } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
 import RichTextEditor from '../../../components/ui/RichTextEditor'
 import DateRangePicker from '../../../components/ui/DateRangePicker'
@@ -12,13 +12,15 @@ function formatDateRange(start: string, end: string) {
 
 export default function StepEventInfo() {
   const { form, updateEventInfo } = useTicketStore()
-  const fileRef = useRef<HTMLInputElement>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [bannerMode, setBannerMode] = useState<'upload' | 'url'>(form.bannerPreview?.startsWith('http') ? 'url' : 'upload')
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  const handleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const url = URL.createObjectURL(file)
+    // Store preview locally but note: actual upload URL needed from backend
     updateEventInfo({ banner: file, bannerPreview: url })
   }
 
@@ -31,25 +33,62 @@ export default function StepEventInfo() {
     <div>
       <h2 className="text-[15px] font-semibold text-[#3b5bdb] mb-5">Event info</h2>
 
-      {/* Banner upload */}
-      <div className="flex items-center gap-3 mb-5">
-        <div
-          onClick={() => fileRef.current?.click()}
-          className="w-[88px] h-[88px] rounded-lg overflow-hidden cursor-pointer flex-shrink-0 border border-gray-200"
-        >
-          {form.bannerPreview ? (
-            <img src={form.bannerPreview} alt="Banner" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-              <ImageIcon size={28} className="text-gray-400" />
+      {/* Banner */}
+      <div className="mb-5">
+        <div className="flex items-center gap-3 mb-2">
+          <div
+            className="w-22 h-22 rounded-lg overflow-hidden shrink-0 border border-gray-200 cursor-pointer"
+            onClick={() => bannerMode === 'upload' && fileRef.current?.click()}
+          >
+            {form.bannerPreview ? (
+              <img src={form.bannerPreview} alt="Banner" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <ImageIcon size={28} className="text-gray-400" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setBannerMode('upload')}
+                className={`text-[12px] px-2.5 py-1 rounded-md border transition-colors ${bannerMode === 'upload' ? 'border-[#3b5bdb] text-[#3b5bdb] bg-blue-50' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+              >
+                Upload file
+              </button>
+              <button
+                type="button"
+                onClick={() => setBannerMode('url')}
+                className={`text-[12px] px-2.5 py-1 rounded-md border transition-colors ${bannerMode === 'url' ? 'border-[#3b5bdb] text-[#3b5bdb] bg-blue-50' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+              >
+                Paste URL
+              </button>
             </div>
-          )}
+            {bannerMode === 'upload' ? (
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="text-[13px] text-gray-600 underline underline-offset-2 hover:text-gray-800 text-left">
+                {form.bannerPreview ? 'Change banner' : 'Choose image'}
+              </button>
+            ) : (
+              <p className="text-[11px] text-gray-400">Enter a public image URL below</p>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleBannerFile} />
         </div>
-        <button type="button" onClick={() => fileRef.current?.click()}
-          className="text-[13px] text-gray-600 underline underline-offset-2 hover:text-gray-800">
-          {form.bannerPreview ? 'Change banner' : 'Upload banner'}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleBanner} />
+
+        {bannerMode === 'url' && (
+          <div className="relative">
+            <Link size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="url"
+              value={form.bannerPreview?.startsWith('http') ? form.bannerPreview : ''}
+              onChange={(e) => updateEventInfo({ bannerPreview: e.target.value, banner: null })}
+              placeholder="https://cdn.example.com/banner.jpg"
+              className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-[13px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
+            />
+          </div>
+        )}
       </div>
 
       {/* Program name */}
@@ -71,7 +110,7 @@ export default function StepEventInfo() {
         />
       </div>
 
-      {/* Date range — opens upward */}
+      {/* Date range */}
       <div className="relative mb-3">
         <button
           type="button"
@@ -85,7 +124,6 @@ export default function StepEventInfo() {
             <span className="text-gray-400">Start date — End date</span>
           )}
         </button>
-
         {showDatePicker && (
           <div className="absolute bottom-full left-0 z-20 mb-2">
             <DateRangePicker
@@ -110,12 +148,12 @@ export default function StepEventInfo() {
           value={form.totalDays}
           onChange={(e) => updateEventInfo({ totalDays: Number(e.target.value) })}
           placeholder="Total number of days"
-          className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-[13px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
+          className="w-full pl-8 pr-12 py-2.5 border border-gray-300 rounded-lg text-[13px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-gray-400">days</span>
       </div>
 
-      {/* Location with Google Maps */}
+      {/* Location */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -130,8 +168,7 @@ export default function StepEventInfo() {
         <button
           type="button"
           onClick={openGoogleMaps}
-          title="Verify on Google Maps"
-          className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-all flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-all shrink-0"
         >
           <ExternalLink size={13} />
           Maps

@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import TicketsPage from './pages/TicketsPage'
 import NewTicketPage from './pages/tickets/NewTicketPage'
 import TicketPreviewPage from './pages/tickets/TicketPreviewPage'
+import PublicEventPage from './pages/tickets/PublicEventPage'
 import TicketDetailPage from './pages/tickets/detail/TicketDetailPage'
 import AttendeesPage from './pages/tickets/detail/AttendeesPage'
 import MealTicketsPage from './pages/tickets/detail/MealTicketsPage'
@@ -21,19 +22,10 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/tickets/preview" element={<ProtectedRoute><TicketPreviewPage /></ProtectedRoute>} />
+          <Route path="/events/s/:slug" element={<PublicEventPage />} />
 
-          {/* Ticket preview — full page outside admin layout */}
-          <Route path="/tickets/preview" element={
-         <ProtectedRoute>
-              <TicketPreviewPage />
-         </ProtectedRoute>
-            } />
-
-          <Route path="/" element={
-           <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }>
+          <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="tickets" element={<TicketsPage />} />

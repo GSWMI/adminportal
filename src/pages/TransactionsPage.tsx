@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, SlidersHorizontal, ExternalLink, Calendar, MoreVertical, CreditCard, FileText } from 'lucide-react'
+import { Search, SlidersHorizontal, ExternalLink, Calendar, MoreVertical, CreditCard, FileText, Loader2 } from 'lucide-react'
 import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
+import { exportOrdersCsv } from '../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -113,6 +114,7 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   const tableRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -156,9 +158,23 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-[22px] font-semibold text-gray-900">Transactions</h1>
         {hasOrders && (
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors whitespace-nowrap">
-            <ExternalLink size={14} />
-            Export
+          <button
+            onClick={async () => {
+              setExporting(true)
+              try {
+                await exportOrdersCsv()
+                toast.success('Orders exported successfully')
+              } catch {
+                toast.error('Failed to export orders')
+              } finally {
+                setExporting(false)
+              }
+            }}
+            disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors whitespace-nowrap disabled:opacity-60"
+          >
+            {exporting ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+            {exporting ? 'Exporting...' : 'Export'}
           </button>
         )}
       </div>

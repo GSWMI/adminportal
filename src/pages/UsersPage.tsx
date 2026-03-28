@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { UserPlus, Search, MoreVertical, Plus } from 'lucide-react'
 import AddUserModal from '../components/AddUserModal'
 import { toast } from 'sonner'
+import { getActivityLog, type ActivityLogItem } from '../services/eventService'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 
 interface AdminUser {
   id: string
@@ -11,25 +14,11 @@ interface AdminUser {
   role: 'This is you' | 'Admin' | 'Subadmin'
 }
 
-interface ActivityLog {
-  id: string
-  user: string
-  activity: string
-  timestamp: string
-}
-
 const mockUsers: AdminUser[] = [
   { id: '1', fullName: 'Lesi Lion', username: 'lesi', lastActive: '16 Jan 2025', role: 'This is you' },
   { id: '2', fullName: 'Zia Zia', username: 'zia', lastActive: '16 Jan 2025', role: 'Admin' },
   { id: '3', fullName: 'Ola Ola', username: 'ola', lastActive: '16 Jan 2025', role: 'Subadmin' },
 ]
-
-const mockActivityLog: ActivityLog[] = Array.from({ length: 10 }, (_, i) => ({
-  id: `log-${i}`,
-  user: ['Lesi Lion', 'Lesi Lion', 'Lesi Lion', 'Zia Zia', 'Zia Zia', 'Zia Zia', 'Ola Ola', 'Ola Ola', 'Ola Ola', 'Ola Ola'][i],
-  activity: ['New user added', 'New user added', 'New user added', 'New ticket created', 'New ticket created', 'New ticket created', 'New user added', 'New user added', 'New user added', 'New user added'][i],
-  timestamp: '16 Jan 2025, 10:30AM',
-}))
 
 function SortIcon() {
   return (
@@ -37,6 +26,40 @@ function SortIcon() {
       <path d="M5 2v6M2 5l3-3 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
+}
+
+function formatTimestamp(s: string) {
+  if (!s) return '—'
+  return new Date(s).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
+
+function formatActivity(log: ActivityLogItem): string {
+  const actionMap: Record<string, string> = {
+    create: 'created',
+    update: 'updated',
+    delete: 'deleted',
+    register: 'registered',
+    login: 'logged in',
+    logout: 'logged out',
+  }
+  const entityMap: Record<string, string> = {
+    event: 'ticket',
+    order: 'order',
+    user: 'user',
+  }
+  const action = actionMap[log.action?.toLowerCase()] ?? log.action ?? 'performed action'
+  const entity = entityMap[log.entity?.toLowerCase()] ?? log.entity ?? 'item'
+  return log.description ?? `New ${entity} ${action}`
+}
+
+function getPerformedBy(log: ActivityLogItem): string {
+  if (log.performedBy?.firstName) {
+    return `${log.performedBy.firstName} ${log.performedBy.lastName}`
+  }
+  return log.performedBy?.email ?? '—'
 }
 
 function UserRow({ user, openMenuId, setOpenMenuId, onRemove }: {
@@ -67,7 +90,7 @@ function UserRow({ user, openMenuId, setOpenMenuId, onRemove }: {
               <MoreVertical size={15} />
             </button>
             {menuOpen && (
-              <div className="absolute right-4 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-38.75">
+              <div className="absolute right-4 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[155px]">
                 <button
                   onClick={() => { setOpenMenuId(null); toast('Coming soon') }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
@@ -95,9 +118,37 @@ export default function UsersPage() {
   const [search, setSearch] = useState('')
   const [users, setUsers] = useState(mockUsers)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [page, setPage] = useState(1)
-  const TOTAL_PAGES = activeTab === 'users' ? 1 : 10
+
+  // Users pagination
+  const [userPage, setUserPage] = useState(1)
+  const USER_TOTAL_PAGES = 1
+
+  // Activity log state
+  const [logs, setLogs] = useState<ActivityLogItem[]>([])
+  const [logPage, setLogPage] = useState(1)
+  const [logTotalPages, setLogTotalPages] = useState(1)
+  const [logLoading, setLogLoading] = useState(false)
+
   const tableRef = useRef<HTMLDivElement>(null)
+
+  // Fetch activity log when tab is active or page changes
+  useEffect(() => {
+    if (activeTab !== 'activity') return
+
+    async function fetchLogs() {
+      setLogLoading(true)
+      try {
+        const result = await getActivityLog({ page: logPage, limit: 10 })
+        setLogs(result.logs)
+        setLogTotalPages(result.pagination.pages || 1)
+      } catch {
+        toast.error('Failed to load activity log')
+      } finally {
+        setLogLoading(false)
+      }
+    }
+    fetchLogs()
+  }, [activeTab, logPage])
 
   // Close menu on outside click
   useEffect(() => {
@@ -119,12 +170,14 @@ export default function UsersPage() {
     !search || u.fullName.toLowerCase().includes(search.toLowerCase())
   )
 
-  const filteredLogs = mockActivityLog.filter((l) =>
-    !search || l.user.toLowerCase().includes(search.toLowerCase()) || l.activity.toLowerCase().includes(search.toLowerCase())
+  const filteredLogs = logs.filter((l) =>
+    !search ||
+    getPerformedBy(l).toLowerCase().includes(search.toLowerCase()) ||
+    formatActivity(l).toLowerCase().includes(search.toLowerCase())
   )
 
   return (
-    <div className="max-w-250">
+    <div className="max-w-[1000px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-[22px] font-semibold text-gray-900">Users</h1>
@@ -138,13 +191,13 @@ export default function UsersPage() {
       </div>
 
       <div ref={tableRef} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {/* Tabs + Search toolbar */}
+        {/* Tabs + Search */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
             {(['users', 'activity'] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => { setActiveTab(tab); setSearch(''); setPage(1) }}
+                onClick={() => { setActiveTab(tab); setSearch('') }}
                 className={`px-4 py-1.5 text-[13px] font-medium transition-colors ${
                   activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                 }`}
@@ -164,7 +217,7 @@ export default function UsersPage() {
           </div>
         </div>
 
-        {/* Users tab */}
+        {/* ── Users Tab ── */}
         {activeTab === 'users' && (
           <>
             <table className="w-full">
@@ -174,8 +227,7 @@ export default function UsersPage() {
                     <th key={i} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500">
                       {h && (
                         <span className="flex items-center gap-1">
-                          {h}
-                          {h !== '' && <SortIcon />}
+                          {h}{h !== '' && <SortIcon />}
                         </span>
                       )}
                     </th>
@@ -194,8 +246,6 @@ export default function UsersPage() {
                 ))}
               </tbody>
             </table>
-
-            {/* Add user row */}
             <div className="px-5 py-3 border-t border-gray-100">
               <button
                 onClick={() => setShowAddUser(true)}
@@ -208,52 +258,85 @@ export default function UsersPage() {
           </>
         )}
 
-        {/* Activity Log tab */}
+        {/* ── Activity Log Tab ── */}
         {activeTab === 'activity' && (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['User', 'Activity', 'Timestamp'].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500">
-                    <span className="flex items-center gap-1">
-                      {h}
-                      <SortIcon />
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">{log.user}</td>
-                  <td className="px-5 py-3.5 text-[13px] text-gray-600">{log.activity}</td>
-                  <td className="px-5 py-3.5 text-[13px] text-gray-500 whitespace-nowrap">{log.timestamp}</td>
+          <>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['User', 'Activity', 'Timestamp'].map((h) => (
+                    <th key={h} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500">
+                      <span className="flex items-center gap-1">{h}<SortIcon /></span>
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {logLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="px-5 py-3.5"><Skeleton width={120} height={14} /></td>
+                      <td className="px-5 py-3.5"><Skeleton width={180} height={14} /></td>
+                      <td className="px-5 py-3.5"><Skeleton width={150} height={14} /></td>
+                    </tr>
+                  ))
+                ) : filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="text-center py-12 text-[13px] text-gray-400">
+                      No activity found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <tr key={log._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">
+                        {getPerformedBy(log)}
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-600">
+                        {formatActivity(log)}
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-500 whitespace-nowrap">
+                        {formatTimestamp(log.createdAt)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </>
         )}
 
         {/* Pagination */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-          <span className="text-[12px] text-gray-500">Page {page} of {TOTAL_PAGES}</span>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-            >
-              Previous
-            </button>
-            <button
-              disabled={page === TOTAL_PAGES}
-              onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-            >
-              Next
-            </button>
-          </div>
+          {activeTab === 'users' ? (
+            <>
+              <span className="text-[12px] text-gray-500">Page {userPage} of {USER_TOTAL_PAGES}</span>
+              <div className="flex items-center gap-2">
+                <button disabled={userPage === 1} onClick={() => setUserPage((p) => p - 1)}
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
+                  Previous
+                </button>
+                <button disabled={userPage === USER_TOTAL_PAGES} onClick={() => setUserPage((p) => p + 1)}
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
+                  Next
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-[12px] text-gray-500">Page {logPage} of {logTotalPages}</span>
+              <div className="flex items-center gap-2">
+                <button disabled={logPage === 1 || logLoading} onClick={() => setLogPage((p) => p - 1)}
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
+                  Previous
+                </button>
+                <button disabled={logPage === logTotalPages || logLoading} onClick={() => setLogPage((p) => p + 1)}
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
+                  Next
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
