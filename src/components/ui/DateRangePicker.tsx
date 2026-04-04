@@ -38,7 +38,9 @@ export default function DateRangePicker({ startDate, endDate, onApply, onCancel 
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ]
 
-  const isToday = (d: number) => toISO(year, month, d) === toISO(today.getFullYear(), today.getMonth(), today.getDate())
+  const todayISO = toISO(today.getFullYear(), today.getMonth(), today.getDate())
+  const isToday = (d: number) => toISO(year, month, d) === todayISO
+  const isPast = (d: number) => toISO(year, month, d) < todayISO
   const isStart = (d: number) => toISO(year, month, d) === tempStart
   const isEnd = (d: number) => toISO(year, month, d) === tempEnd
   const isInRange = (d: number) => {
@@ -48,6 +50,7 @@ export default function DateRangePicker({ startDate, endDate, onApply, onCancel 
 
   const handleDay = (d: number) => {
     const iso = toISO(year, month, d)
+    if (isPast(d)) return // block past dates
     if (picking === 'start') {
       setTempStart(iso)
       setTempEnd('')
@@ -66,7 +69,7 @@ export default function DateRangePicker({ startDate, endDate, onApply, onCancel 
   const canApply = !!tempStart
 
   return (
-    <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-4 w-77.5">
+    <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-4 w-[310px]">
 
       {/* Picking indicator */}
       <div className="flex items-center gap-2 mb-3">
@@ -135,15 +138,18 @@ export default function DateRangePicker({ startDate, endDate, onApply, onCancel 
           const end = isEnd(day)
           const inRange = isInRange(day)
           const todayMark = isToday(day)
+          const past = isPast(day)
           return (
             <button
               key={i}
               onClick={() => handleDay(day)}
+              disabled={past}
               className={`
                 h-8 w-8 mx-auto flex items-center justify-center text-[12px] transition-colors relative
-                ${start || end ? 'rounded-full bg-[#3b5bdb] text-white font-semibold' : ''}
-                ${inRange ? 'bg-blue-50 text-blue-700 rounded-none' : ''}
-                ${!start && !end && !inRange ? 'rounded-full hover:bg-gray-100 text-gray-700' : ''}
+                ${past ? 'text-gray-300 cursor-not-allowed' : ''}
+                ${!past && (start || end) ? 'rounded-full bg-[#3b5bdb] text-white font-semibold' : ''}
+                ${!past && inRange ? 'bg-blue-50 text-blue-700 rounded-none' : ''}
+                ${!past && !start && !end && !inRange ? 'rounded-full hover:bg-gray-100 text-gray-700' : ''}
               `}
             >
               {day}

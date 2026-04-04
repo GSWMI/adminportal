@@ -34,21 +34,38 @@ export interface EventApiPayload {
   transportRegistrationOpen: boolean
 }
 
-// Strip HTML tags from rich text editor output
+export interface AccommodationApiPayload {
+  name: string
+  description: string
+  price: number
+  capacity: number
+  available: boolean
+  amenities: string[]
+  eventId: string
+}
+
+export interface TransportApiPayload {
+  name: string
+  description: string
+  price: number
+  available: boolean
+  pickupLocation: string
+  dropoffLocation: string
+  eventId: string
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim()
 }
 
-// Map store days/slots/options to the new API mealOptions structure
 function mapMealOptions(form: TicketFormData): MealOptionGroupPayload[] {
   const result: MealOptionGroupPayload[] = []
-
   form.days.forEach((day, dayIndex) => {
     day.slots.forEach((slot) => {
       if (slot.options.length > 0) {
         result.push({
           day: dayIndex + 1,
-          slot: slot.name.toLowerCase(), // breakfast | lunch | dinner
+          slot: slot.name.toLowerCase(),
           options: slot.options.map((opt) => ({
             name: opt.name,
             price: opt.price,
@@ -58,16 +75,11 @@ function mapMealOptions(form: TicketFormData): MealOptionGroupPayload[] {
       }
     })
   })
-
   return result
 }
 
-// Map store customFields to API customQuestions
 function mapCustomQuestions(form: TicketFormData): CustomQuestionPayload[] {
-  return form.customFields.map((f) => ({
-    question: f.question,
-    required: f.required,
-  }))
+  return form.customFields.map((f) => ({ question: f.question, required: f.required }))
 }
 
 export function mapFormToEventPayload(form: TicketFormData): EventApiPayload {
@@ -79,13 +91,46 @@ export function mapFormToEventPayload(form: TicketFormData): EventApiPayload {
     totalDays: form.totalDays,
     location: form.location.trim(),
     bannerUrl: form.bannerPreview || '',
-    mealOptions: mapMealOptions(form),
+    mealOptions: form.ticketTypes.includes('Meal') ? mapMealOptions(form) : [],
     customQuestions: mapCustomQuestions(form),
     consentText: stripHtml(form.consentText) || form.consentText,
     registrationOpen: true,
-    mealRegistrationOpen: form.ticketType === 'Meal',
-    accommodationRegistrationOpen: form.ticketType === 'Accommodation',
-    transportRegistrationOpen: form.ticketType === 'Transportation',
+    mealRegistrationOpen: form.ticketTypes.includes('Meal'),
+    accommodationRegistrationOpen: form.ticketTypes.includes('Accommodation'),
+    transportRegistrationOpen: form.ticketTypes.includes('Transportation'),
+  }
+}
+
+// Map accommodation options for POST /events/accommodation
+export function mapAccommodationPayload(
+  acc: TicketFormData['accommodations'][0],
+  eventId: string
+): AccommodationApiPayload {
+  return {
+    name: acc.name,
+    description: stripHtml(acc.description) || acc.description,
+    price: acc.price,
+    capacity: acc.capacity,
+    available: true,
+    amenities: [],
+    eventId,
+  }
+}
+
+// Map each transport pickup for POST /events/transport
+export function mapTransportPayload(
+  transport: TicketFormData['transport'],
+  pickup: TicketFormData['transport']['pickups'][0],
+  eventId: string
+): TransportApiPayload {
+  return {
+    name: transport.name,
+    description: stripHtml(transport.description) || transport.description,
+    price: pickup.price,
+    available: true,
+    pickupLocation: pickup.pickupLocation,
+    dropoffLocation: 'Conference Venue', // default — backend requires this field
+    eventId,
   }
 }
 
@@ -94,6 +139,6 @@ export function validateEventForm(form: TicketFormData): string | null {
   if (!form.startDate) return 'Start date is required'
   if (!form.endDate) return 'End date is required'
   if (!form.totalDays || form.totalDays < 1) return 'Total days must be at least 1'
-  if (!form.ticketType) return 'Ticket type is required'
+  if (form.ticketTypes.length === 0) return 'Select at least one ticket type'
   return null
 }
