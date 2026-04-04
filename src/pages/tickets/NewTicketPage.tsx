@@ -18,12 +18,34 @@ const STEPS = [
   { label: 'Publish' },
 ]
 
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, '').trim()
+}
+
 function canProceed(step: number, form: ReturnType<typeof useTicketStore.getState>['form']): boolean {
   switch (step) {
-    case 0: return !!form.programName.trim() && !!form.startDate && !!form.endDate && form.totalDays >= 1
-    case 1: return !!form.ticketType
-    case 2: return form.days.some((d) => d.slots.some((s) => s.options.length > 0))
-    case 3: return true // Registration form is optional beyond defaults
+    // Fix 5: All event info fields required
+    case 0:
+      return (
+        !!form.programName.trim() &&
+        !!stripHtml(form.description) &&
+        !!form.startDate &&
+        !!form.endDate &&
+        form.totalDays >= 1 &&
+        !!form.location.trim()
+      )
+    case 1: return form.ticketTypes.length > 0
+    // Fix 6: Each selected ticket type must have at least one option
+    case 2: {
+      const hasMeal = form.ticketTypes.includes('Meal')
+      const hasAccommodation = form.ticketTypes.includes('Accommodation')
+      const hasTransportation = form.ticketTypes.includes('Transportation')
+      const mealOk = !hasMeal || form.days.some((d) => d.slots.some((s) => s.options.length > 0))
+      const accommodationOk = !hasAccommodation || form.accommodations.length > 0
+      const transportOk = !hasTransportation || form.transport.pickups.length > 0
+      return mealOk && accommodationOk && transportOk
+    }
+    case 3: return true
     case 4: return true
     default: return true
   }
@@ -51,10 +73,6 @@ export default function NewTicketPage() {
     navigate('/tickets/preview')
   }
 
-  const handleSaveDraft = () => {
-    toast.success('Saved as draft')
-  }
-
   return (
     <div className="max-w-[1000px]">
       {/* Page header */}
@@ -68,12 +86,7 @@ export default function NewTicketPage() {
           </button>
           <h1 className="text-[18px] font-semibold text-gray-900">New ticket</h1>
         </div>
-        <button
-          onClick={handleSaveDraft}
-          className="px-4 py-2 border border-gray-300 rounded-lg text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Save as draft
-        </button>
+
       </div>
 
       <div className="flex gap-8">

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Timer, Copy, ExternalLink, ArrowLeft, Loader2 } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
-import { createEvent } from '../../../services/eventService'
-import { mapFormToEventPayload, validateEventForm } from '../../../validations/eventValidation'
+import { createEvent, createAccommodation, createTransport } from '../../../services/eventService'
+import { mapFormToEventPayload, mapAccommodationPayload, mapTransportPayload, validateEventForm } from '../../../validations/eventValidation'
 import { toast } from 'sonner'
 
 interface Props {
@@ -30,6 +30,25 @@ export default function StepPublish({ onPreview }: Props) {
     try {
       const payload = mapFormToEventPayload(form)
       const created = await createEvent(payload)
+      const eventId = created._id ?? (created as { id?: string }).id ?? ''
+
+      // Create accommodation options in parallel
+      if (form.ticketTypes.includes('Accommodation') && form.accommodations.length > 0) {
+        await Promise.allSettled(
+          form.accommodations.map((acc) =>
+            createAccommodation(mapAccommodationPayload(acc, eventId))
+          )
+        )
+      }
+
+      // Create transport pickups in parallel (one per pickup location)
+      if (form.ticketTypes.includes('Transportation') && form.transport.pickups.length > 0) {
+        await Promise.allSettled(
+          form.transport.pickups.map((pickup) =>
+            createTransport(mapTransportPayload(form.transport, pickup, eventId))
+          )
+        )
+      }
 
       // Use slug from API response if available, fall back to generated one
       const slug = created.slug ?? form.programName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -72,7 +91,7 @@ export default function StepPublish({ onPreview }: Props) {
 
         <div className="flex items-center gap-2 w-full border border-gray-200 rounded-lg px-3 py-2.5 mb-4 bg-gray-50">
           <span className="flex-1 text-[13px] text-gray-600 truncate">{ticketUrl}</span>
-          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors shrink-0">
+          <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
             <Copy size={15} />
           </button>
         </div>

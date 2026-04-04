@@ -37,7 +37,7 @@ export default function StepEventInfo() {
       <div className="mb-5">
         <div className="flex items-center gap-3 mb-2">
           <div
-            className="w-22 h-22 rounded-lg overflow-hidden shrink-0 border border-gray-200 cursor-pointer"
+            className="w-[88px] h-[88px] rounded-lg overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer"
             onClick={() => bannerMode === 'upload' && fileRef.current?.click()}
           >
             {form.bannerPreview ? (
@@ -92,16 +92,20 @@ export default function StepEventInfo() {
       </div>
 
       {/* Program name */}
-      <input
-        type="text"
-        value={form.programName}
-        onChange={(e) => updateEventInfo({ programName: e.target.value })}
-        placeholder="Enter program name"
-        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-[14px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all mb-3"
-      />
+      <div className="mb-3">
+        <label className="text-[12px] font-medium text-gray-600 mb-1 block">Program name <span className="text-red-500">*</span></label>
+        <input
+          type="text"
+          value={form.programName}
+          onChange={(e) => updateEventInfo({ programName: e.target.value })}
+          placeholder="Enter program name"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-[14px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
+        />
+      </div>
 
       {/* Description */}
       <div className="mb-4">
+        <label className="text-[12px] font-medium text-gray-600 mb-1 block">Description <span className="text-red-500">*</span></label>
         <RichTextEditor
           value={form.description}
           onChange={(val) => updateEventInfo({ description: val })}
@@ -111,6 +115,7 @@ export default function StepEventInfo() {
       </div>
 
       {/* Date range */}
+      <label className="text-[12px] font-medium text-gray-600 mb-1 block">Event dates <span className="text-red-500">*</span></label>
       <div className="relative mb-3">
         <button
           type="button"
@@ -130,7 +135,13 @@ export default function StepEventInfo() {
               startDate={form.startDate}
               endDate={form.endDate}
               onApply={(start, end) => {
-                updateEventInfo({ startDate: start, endDate: end })
+                // Auto-calculate total days from date range
+                let totalDays = 1
+                if (start && end) {
+                  const diff = new Date(end).getTime() - new Date(start).getTime()
+                  totalDays = Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1)
+                }
+                updateEventInfo({ startDate: start, endDate: end, totalDays })
                 setShowDatePicker(false)
               }}
               onCancel={() => setShowDatePicker(false)}
@@ -139,21 +150,23 @@ export default function StepEventInfo() {
         )}
       </div>
 
-      {/* Total days */}
+      {/* Total days - auto calculated */}
       <div className="relative mb-3">
         <Hash size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="number"
           min={1}
-          value={form.totalDays}
-          onChange={(e) => updateEventInfo({ totalDays: Number(e.target.value) })}
-          placeholder="Total number of days"
-          className="w-full pl-8 pr-12 py-2.5 border border-gray-300 rounded-lg text-[13px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
+          value={form.totalDays || ''}
+          readOnly
+          placeholder="Auto-calculated from dates"
+          className="w-full pl-8 pr-12 py-2.5 border border-gray-200 rounded-lg text-[13px] text-gray-500 bg-gray-50 placeholder:text-gray-400 outline-none cursor-not-allowed"
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-gray-400">days</span>
       </div>
+      <p className="text-[11px] text-gray-400 -mt-2 mb-3 ml-1">Auto-calculated from the date range you select above</p>
 
       {/* Location */}
+      <label className="text-[12px] font-medium text-gray-600 mb-1 block">Location <span className="text-red-500">*</span></label>
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -168,7 +181,7 @@ export default function StepEventInfo() {
         <button
           type="button"
           onClick={openGoogleMaps}
-          className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-all shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-all flex-shrink-0"
         >
           <ExternalLink size={13} />
           Maps

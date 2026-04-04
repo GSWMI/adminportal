@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type TicketType = 'Meal' | 'Accommodation' | 'Transportation' | ''
+export type TicketType = 'Meal' | 'Accommodation' | 'Transportation'
 
 export interface MealOption {
   id: string
@@ -11,14 +11,34 @@ export interface MealOption {
 
 export interface MealSlot {
   id: string
-  name: string // Breakfast | Lunch | Dinner
+  name: string
   options: MealOption[]
 }
 
 export interface EventDay {
   id: string
-  label: string // Day 1 | Day 2 ...
+  label: string
   slots: MealSlot[]
+}
+
+export interface AccommodationOption {
+  id: string
+  name: string
+  description: string
+  capacity: number
+  price: number
+}
+
+export interface TransportPickup {
+  id: string
+  pickupLocation: string
+  price: number
+}
+
+export interface TransportOption {
+  name: string
+  description: string
+  pickups: TransportPickup[]
 }
 
 export type CustomFieldType =
@@ -42,21 +62,27 @@ export interface TicketFormData {
   banner: File | null
   bannerPreview: string
   programName: string
-  description: string // rich text HTML
+  description: string
   startDate: string
   endDate: string
   location: string
   totalDays: number
 
-  // Step 2 - Ticket type
-  ticketType: TicketType
+  // Step 2 - Ticket types (multi-select)
+  ticketTypes: TicketType[]
 
-  // Step 3 - Options, prices & quantity limit
+  // Step 3 - Meal options
   days: EventDay[]
+
+  // Step 3 - Accommodation options
+  accommodations: AccommodationOption[]
+
+  // Step 3 - Transport
+  transport: TransportOption
 
   // Step 4 - Registration form
   customFields: CustomField[]
-  consentText: string // rich text HTML
+  consentText: string
 
   // Meta
   currentStep: number
@@ -68,10 +94,15 @@ interface TicketStore {
   setStep: (step: number) => void
   completeStep: (step: number) => void
   updateEventInfo: (data: Partial<TicketFormData>) => void
-  updateTicketType: (type: TicketType) => void
+  toggleTicketType: (type: TicketType) => void
   updateDays: (days: EventDay[]) => void
   addMealOption: (dayId: string, slotId: string, option: MealOption) => void
   removeMealOption: (dayId: string, slotId: string, optionId: string) => void
+  addAccommodation: (option: AccommodationOption) => void
+  removeAccommodation: (id: string) => void
+  updateTransport: (data: Partial<TransportOption>) => void
+  addPickup: (pickup: TransportPickup) => void
+  removePickup: (id: string) => void
   addCustomField: (field: CustomField) => void
   removeCustomField: (id: string) => void
   updateCustomField: (id: string, data: Partial<CustomField>) => void
@@ -99,8 +130,10 @@ const initialForm: TicketFormData = {
   endDate: '',
   location: '',
   totalDays: 3,
-  ticketType: '',
+  ticketTypes: [],
   days: defaultDays(),
+  accommodations: [],
+  transport: { name: '', description: '', pickups: [] },
   customFields: [],
   consentText: '',
   currentStep: 0,
@@ -126,8 +159,14 @@ export const useTicketStore = create<TicketStore>()((set) => ({
   updateEventInfo: (data) =>
     set((s) => ({ form: { ...s.form, ...data } })),
 
-  updateTicketType: (type) =>
-    set((s) => ({ form: { ...s.form, ticketType: type } })),
+  toggleTicketType: (type) =>
+    set((s) => {
+      const current = s.form.ticketTypes
+      const next = current.includes(type)
+        ? current.filter((t) => t !== type)
+        : [...current, type]
+      return { form: { ...s.form, ticketTypes: next } }
+    }),
 
   updateDays: (days) =>
     set((s) => ({ form: { ...s.form, days } })),
@@ -167,6 +206,46 @@ export const useTicketStore = create<TicketStore>()((set) => ({
               }
             : d
         ),
+      },
+    })),
+
+  addAccommodation: (option) =>
+    set((s) => ({
+      form: { ...s.form, accommodations: [...s.form.accommodations, option] },
+    })),
+
+  removeAccommodation: (id) =>
+    set((s) => ({
+      form: {
+        ...s.form,
+        accommodations: s.form.accommodations.filter((a) => a.id !== id),
+      },
+    })),
+
+  updateTransport: (data) =>
+    set((s) => ({
+      form: { ...s.form, transport: { ...s.form.transport, ...data } },
+    })),
+
+  addPickup: (pickup) =>
+    set((s) => ({
+      form: {
+        ...s.form,
+        transport: {
+          ...s.form.transport,
+          pickups: [...s.form.transport.pickups, pickup],
+        },
+      },
+    })),
+
+  removePickup: (id) =>
+    set((s) => ({
+      form: {
+        ...s.form,
+        transport: {
+          ...s.form.transport,
+          pickups: s.form.transport.pickups.filter((p) => p.id !== id),
+        },
       },
     })),
 
