@@ -25,7 +25,8 @@ export interface AccommodationOption {
   id: string
   name: string
   description: string
-  capacity: number
+  peoplePerRoom: number
+  totalCapacity: number
   price: number
 }
 
@@ -96,6 +97,8 @@ interface TicketStore {
   updateEventInfo: (data: Partial<TicketFormData>) => void
   toggleTicketType: (type: TicketType) => void
   updateDays: (days: EventDay[]) => void
+  addDay: () => void
+  removeDay: (id: string) => void
   addMealOption: (dayId: string, slotId: string, option: MealOption) => void
   removeMealOption: (dayId: string, slotId: string, optionId: string) => void
   addAccommodation: (option: AccommodationOption) => void
@@ -110,8 +113,8 @@ interface TicketStore {
   reset: () => void
 }
 
-const defaultDays = (): EventDay[] =>
-  [1, 2, 3].map((n) => ({
+function makeDay(n: number): EventDay {
+  return {
     id: `day-${n}`,
     label: `Day ${n}`,
     slots: ['Breakfast', 'Lunch', 'Dinner'].map((slot) => ({
@@ -119,7 +122,10 @@ const defaultDays = (): EventDay[] =>
       name: slot,
       options: [],
     })),
-  }))
+  }
+}
+
+const defaultDays = (): EventDay[] => [makeDay(1)]
 
 const initialForm: TicketFormData = {
   banner: null,
@@ -129,7 +135,7 @@ const initialForm: TicketFormData = {
   startDate: '',
   endDate: '',
   location: '',
-  totalDays: 3,
+  totalDays: 1,
   ticketTypes: [],
   days: defaultDays(),
   accommodations: [],
@@ -170,6 +176,20 @@ export const useTicketStore = create<TicketStore>()((set) => ({
 
   updateDays: (days) =>
     set((s) => ({ form: { ...s.form, days } })),
+
+  addDay: () =>
+    set((s) => {
+      const nextN = s.form.days.length + 1
+      return { form: { ...s.form, days: [...s.form.days, makeDay(nextN)], totalDays: nextN } }
+    }),
+
+  removeDay: (id) =>
+    set((s) => {
+      const filtered = s.form.days.filter((d) => d.id !== id)
+      // Re-label days sequentially after removal
+      const relabelled = filtered.map((d, i) => ({ ...d, label: `Day ${i + 1}` }))
+      return { form: { ...s.form, days: relabelled, totalDays: relabelled.length } }
+    }),
 
   addMealOption: (dayId, slotId, option) =>
     set((s) => ({

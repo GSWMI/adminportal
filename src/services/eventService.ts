@@ -83,8 +83,11 @@ export async function getEventBySlug(slug: string): Promise<EventData> {
   return data?.data?.event ?? data?.data ?? data?.event ?? data
 }
 
-export async function createEvent(payload: object): Promise<EventData> {
-  const { data } = await api.post('/events/', payload)
+export async function createEvent(payload: FormData | object): Promise<EventData> {
+  const isFormData = payload instanceof FormData
+  const { data } = await api.post('/events/', payload, {
+    headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' },
+  })
   return data?.data?.event ?? data?.data ?? data?.event ?? data
 }
 

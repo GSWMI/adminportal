@@ -84,7 +84,7 @@ export default function StepEventInfo() {
               type="url"
               value={form.bannerPreview?.startsWith('http') ? form.bannerPreview : ''}
               onChange={(e) => updateEventInfo({ bannerPreview: e.target.value, banner: null })}
-              placeholder="https://cdn.example.com/banner.jpg"
+              placeholder="https://cdn.example.com/banner.jpg (public URL only)"
               className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-[13px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
             />
           </div>
@@ -163,7 +163,7 @@ export default function StepEventInfo() {
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-gray-400">days</span>
       </div>
-      <p className="text-[11px] text-gray-400 -mt-2 mb-3 ml-1">Auto-calculated from the date range you select above</p>
+      <p className="text-[11px] text-gray-400 -mt-2 mb-3 ml-1">Auto-calculated from date range. Also updates when you add meal days in Step 3</p>
 
       {/* Location */}
       <label className="text-[12px] font-medium text-gray-600 mb-1 block">Location <span className="text-red-500">*</span></label>

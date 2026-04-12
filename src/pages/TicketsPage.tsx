@@ -27,7 +27,7 @@ interface TicketCardProps {
   event: EventData
   openMenuId: string | null
   setOpenMenuId: (id: string | null) => void
-  onRegistrationToggle: (id: string, open: boolean) => void
+  onRegistrationToggle: (id: string, type: 'meal' | 'accommodation' | 'transport' | 'all', open: boolean) => void
 }
 
 function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: TicketCardProps) {
@@ -69,14 +69,37 @@ function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: 
                   >
                     Archive event
                   </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <p className="px-4 py-1 text-[11px] text-gray-400 uppercase tracking-wide font-medium">Toggle registration</p>
+                  {event.mealRegistrationOpen !== undefined && (
+                    <button
+                      onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'meal', !event.mealRegistrationOpen) }}
+                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      {event.mealRegistrationOpen ? 'Close meal' : 'Open meal'}
+                    </button>
+                  )}
+                  {event.accommodationRegistrationOpen !== undefined && (
+                    <button
+                      onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'accommodation', !event.accommodationRegistrationOpen) }}
+                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      {event.accommodationRegistrationOpen ? 'Close accommodation' : 'Open accommodation'}
+                    </button>
+                  )}
+                  {event.transportRegistrationOpen !== undefined && (
+                    <button
+                      onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'transport', !event.transportRegistrationOpen) }}
+                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      {event.transportRegistrationOpen ? 'Close transport' : 'Open transport'}
+                    </button>
+                  )}
                   <button
-                    onClick={() => {
-                      setOpenMenuId(null)
-                      onRegistrationToggle(event._id, !event.registrationOpen)
-                    }}
+                    onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'all', !event.registrationOpen) }}
                     className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
-                    {event.registrationOpen ? 'Close registration' : 'Open registration'}
+                    {event.registrationOpen ? 'Close all' : 'Open all'}
                   </button>
                 </div>
               )}
@@ -184,11 +207,20 @@ export default function TicketsPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const handleRegistrationToggle = async (id: string, open: boolean) => {
+  const handleRegistrationToggle = async (id: string, type: 'meal' | 'accommodation' | 'transport' | 'all', open: boolean) => {
     try {
-      await updateRegistration(id, 'all', open)
-      setEvents((prev) => prev.map((e) => e._id === id ? { ...e, registrationOpen: open } : e))
-      toast.success(open ? 'Registration opened' : 'Registration closed')
+      await updateRegistration(id, type, open)
+      setEvents((prev) => prev.map((e) => {
+        if (e._id !== id) return e
+        const updates: Partial<EventData> = {}
+        if (type === 'meal' || type === 'all') updates.mealRegistrationOpen = open
+        if (type === 'accommodation' || type === 'all') updates.accommodationRegistrationOpen = open
+        if (type === 'transport' || type === 'all') updates.transportRegistrationOpen = open
+        if (type === 'all') updates.registrationOpen = open
+        return { ...e, ...updates }
+      }))
+      const label = type === 'all' ? 'Registration' : `${type.charAt(0).toUpperCase() + type.slice(1)} registration`
+      toast.success(open ? `${label} opened` : `${label} closed`)
     } catch {
       toast.error('Failed to update registration')
     }
