@@ -241,7 +241,7 @@ function AccommodationPreviewSection() {
                 <div className="bg-blue-50/60 border border-blue-100 rounded-xl px-4 py-3 space-y-1.5">
                   {selected.description && <p className="text-[13px] text-gray-600">{selected.description}</p>}
                   <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
-                    <Users size={14} className="flex-shrink-0" /> Capacity: {selected.capacity}
+                    <Users size={14} className="flex-shrink-0" /> Per room: {selected.peoplePerRoom} · Total: {selected.totalCapacity}
                   </div>
                   <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
                     <Hash size={14} className="flex-shrink-0" /> Price: ₦{selected.price.toLocaleString()}
