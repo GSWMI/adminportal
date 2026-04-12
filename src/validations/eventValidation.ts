@@ -1,5 +1,7 @@
 import type { TicketFormData } from '../store/ticketStore'
 
+// ── Interfaces (for type safety) ─────────────────────────────────────────────
+
 export interface MealOptionPayload {
   name: string
   price: number
@@ -17,28 +19,12 @@ export interface CustomQuestionPayload {
   required: boolean
 }
 
-export interface EventApiPayload {
-  name: string
-  description: string
-  startDate: string
-  endDate: string
-  totalDays: number
-  location: string
-  bannerUrl: string
-  mealOptions: MealOptionGroupPayload[]
-  customQuestions: CustomQuestionPayload[]
-  consentText: string
-  registrationOpen: boolean
-  mealRegistrationOpen: boolean
-  accommodationRegistrationOpen: boolean
-  transportRegistrationOpen: boolean
-}
-
 export interface AccommodationApiPayload {
   name: string
   description: string
   price: number
-  capacity: number
+  peoplePerRoom: number
+  totalCapacity: number
   available: boolean
   amenities: string[]
   eventId: string
@@ -54,7 +40,10 @@ export interface TransportApiPayload {
   eventId: string
 }
 
-function stripHtml(html: string): string {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function stripHtml(html: unknown): string {
+  if (!html || typeof html !== 'string') return ''
   return html.replace(/<[^>]*>/g, '').trim()
 }
 
@@ -82,26 +71,44 @@ function mapCustomQuestions(form: TicketFormData): CustomQuestionPayload[] {
   return form.customFields.map((f) => ({ question: f.question, required: f.required }))
 }
 
-export function mapFormToEventPayload(form: TicketFormData): EventApiPayload {
-  return {
-    name: form.programName.trim(),
-    description: stripHtml(form.description) || form.description,
-    startDate: form.startDate,
-    endDate: form.endDate,
-    totalDays: form.totalDays,
-    location: form.location.trim(),
-    bannerUrl: form.bannerPreview || '',
-    mealOptions: form.ticketTypes.includes('Meal') ? mapMealOptions(form) : [],
-    customQuestions: mapCustomQuestions(form),
-    consentText: stripHtml(form.consentText) || form.consentText,
-    registrationOpen: true,
-    mealRegistrationOpen: form.ticketTypes.includes('Meal'),
-    accommodationRegistrationOpen: form.ticketTypes.includes('Accommodation'),
-    transportRegistrationOpen: form.ticketTypes.includes('Transportation'),
+// ── Main event payload — returns FormData (multipart/form-data) ───────────────
+// The backend expects: text fields as plain strings, arrays/objects as JSON strings,
+// and the banner image as a file field named "banner"
+
+export function mapFormToEventPayload(form: TicketFormData): FormData {
+  const fd = new FormData()
+
+  fd.append('name', form.programName.trim())
+  fd.append('description', stripHtml(form.description) || form.description || '')
+  fd.append('startDate', form.startDate)
+  fd.append('endDate', form.endDate)
+  fd.append('totalDays', String(Number(form.totalDays) || form.days.length || 1))
+  fd.append('location', form.location.trim())
+  fd.append('consentText', stripHtml(form.consentText) || form.consentText || '')
+  fd.append('registrationOpen', 'true')
+  fd.append('mealRegistrationOpen', String(form.ticketTypes.includes('Meal')))
+  fd.append('accommodationRegistrationOpen', String(form.ticketTypes.includes('Accommodation')))
+  fd.append('transportRegistrationOpen', String(form.ticketTypes.includes('Transportation')))
+
+  // Arrays must be JSON-stringified
+  const mealOptions = form.ticketTypes.includes('Meal') ? mapMealOptions(form) : []
+  fd.append('mealOptions', JSON.stringify(mealOptions))
+  fd.append('customQuestions', JSON.stringify(mapCustomQuestions(form)))
+
+  // Banner: send the actual File if available, otherwise skip (URL mode not supported by backend)
+  if (form.banner instanceof File) {
+    fd.append('banner', form.banner)
   }
+  // If bannerUrl was pasted (URL mode), send it as a text field
+  else if (form.bannerPreview && !form.bannerPreview.startsWith('blob:')) {
+    fd.append('bannerUrl', form.bannerPreview)
+  }
+
+  return fd
 }
 
-// Map accommodation options for POST /events/accommodation
+// ── Accommodation payload ─────────────────────────────────────────────────────
+
 export function mapAccommodationPayload(
   acc: TicketFormData['accommodations'][0],
   eventId: string
@@ -110,14 +117,16 @@ export function mapAccommodationPayload(
     name: acc.name,
     description: stripHtml(acc.description) || acc.description,
     price: acc.price,
-    capacity: acc.capacity,
+    peoplePerRoom: acc.peoplePerRoom,
+    totalCapacity: acc.totalCapacity,
     available: true,
     amenities: [],
     eventId,
   }
 }
 
-// Map each transport pickup for POST /events/transport
+// ── Transport payload (one per pickup location) ───────────────────────────────
+
 export function mapTransportPayload(
   transport: TicketFormData['transport'],
   pickup: TicketFormData['transport']['pickups'][0],
@@ -129,10 +138,12 @@ export function mapTransportPayload(
     price: pickup.price,
     available: true,
     pickupLocation: pickup.pickupLocation,
-    dropoffLocation: 'Conference Venue', // default — backend requires this field
+    dropoffLocation: 'Conference Venue',
     eventId,
   }
 }
+
+// ── Validation ────────────────────────────────────────────────────────────────
 
 export function validateEventForm(form: TicketFormData): string | null {
   if (!form.programName.trim()) return 'Program name is required'

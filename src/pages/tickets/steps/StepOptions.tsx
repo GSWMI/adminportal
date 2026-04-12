@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { ChevronDown, ChevronUp, X, MapPin, Users, Hash, Plus } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
 import type { MealOption } from '../../../store/ticketStore'
+import { Trash2 } from 'lucide-react'
 import RichTextEditor from '../../../components/ui/RichTextEditor'
 
 function generateId() {
@@ -135,20 +136,33 @@ function SlotPanel({ dayId, slotId, slotName, options }: {
 
 // ── Day Panel ────────────────────────────────────────────────────────────────
 
-function DayPanel({ dayId, label, slots }: {
+function DayPanel({ dayId, label, slots, onRemove }: {
   dayId: string
   label: string
   slots: { id: string; name: string; options: MealOption[] }[]
+  onRemove?: () => void
 }) {
   const [open, setOpen] = useState(false)
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <button type="button" onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors text-left">
-        <span className="text-[14px] font-semibold text-[#3b5bdb]">{label}</span>
-        {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-      </button>
+      <div className="flex items-center px-4 py-3.5 hover:bg-gray-50 transition-colors">
+        <button type="button" onClick={() => setOpen((v) => !v)}
+          className="flex-1 flex items-center justify-between text-left">
+          <span className="text-[14px] font-semibold text-[#3b5bdb]">{label}</span>
+          {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        </button>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="ml-3 text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+            title="Remove this day"
+          >
+            <Trash2 size={15} />
+          </button>
+        )}
+      </div>
       {open && (
         <div className="px-4 pb-4 flex flex-col gap-2 border-t border-gray-100 pt-3">
           {slots.map((slot) => (
@@ -160,6 +174,35 @@ function DayPanel({ dayId, label, slots }: {
   )
 }
 
+
+// ── Meal Section (with dynamic days) ────────────────────────────────────────
+
+function MealSection() {
+  const { form, addDay, removeDay } = useTicketStore()
+
+  return (
+    <div className="flex flex-col gap-3">
+      {form.days.map((day) => (
+        <DayPanel
+          key={day.id}
+          dayId={day.id}
+          label={day.label}
+          slots={day.slots}
+          onRemove={form.days.length > 1 ? () => removeDay(day.id) : undefined}
+        />
+      ))}
+      <button
+        type="button"
+        onClick={addDay}
+        className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-[#3b5bdb]/40 text-[#3b5bdb] rounded-lg text-[13px] font-medium hover:bg-blue-50 transition-colors w-fit"
+      >
+        <Plus size={14} />
+        Add Day {form.days.length + 1}
+      </button>
+    </div>
+  )
+}
+
 // ── Accommodation Section ────────────────────────────────────────────────────
 
 function AccommodationSection() {
@@ -167,12 +210,13 @@ function AccommodationSection() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [capacity, setCapacity] = useState('')
+  const [peoplePerRoom, setPeoplePerRoom] = useState('')
+  const [totalCapacity, setTotalCapacity] = useState('')
   const [price, setPrice] = useState('')
   const [openCards, setOpenCards] = useState<string[]>([])
   const [accDuplicateError, setAccDuplicateError] = useState('')
 
-  const isFilled = name.trim() && Number(capacity) > 0 && Number(price) >= 0
+  const isFilled = name.trim() && Number(peoplePerRoom) > 0 && Number(price) >= 0
 
   const handleAdd = () => {
     if (!isFilled) return
@@ -189,10 +233,11 @@ function AccommodationSection() {
       id: generateId(),
       name: name.trim(),
       description,
-      capacity: Number(capacity),
+      peoplePerRoom: Number(peoplePerRoom),
+      totalCapacity: Number(totalCapacity),
       price: Number(price),
     })
-    setName(''); setDescription(''); setCapacity(''); setPrice('')
+    setName(''); setDescription(''); setPeoplePerRoom(''); setTotalCapacity(''); setPrice('')
   }
 
   const toggleCard = (id: string) =>
@@ -229,8 +274,13 @@ function AccommodationSection() {
                 <div className="px-4 pb-3 text-[13px] text-gray-600 flex flex-col gap-1.5 border-t border-gray-100 pt-3">
                   {acc.description && <p className="text-gray-500 text-[12px] leading-relaxed">{acc.description}</p>}
                   <div className="flex items-center gap-1.5 text-gray-500">
-                    <Users size={12} /><span>Capacity: {acc.capacity}</span>
+                    <Users size={12} /><span>Per room: {acc.peoplePerRoom}</span>
                   </div>
+                  {acc.totalCapacity > 0 && (
+                    <div className="flex items-center gap-1.5 text-gray-500">
+                      <Users size={12} /><span>Total capacity: {acc.totalCapacity}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5 text-gray-500">
                     <Hash size={12} /><span>Price: ₦{acc.price.toLocaleString()}</span>
                   </div>
@@ -260,9 +310,20 @@ function AccommodationSection() {
                 <input
                   type="number"
                   min="1"
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                  placeholder="Capacity"
+                  value={peoplePerRoom}
+                  onChange={(e) => setPeoplePerRoom(e.target.value)}
+                  placeholder="No. per room"
+                  className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] transition-all"
+                />
+              </div>
+              <div className="relative flex-1">
+                <Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="number"
+                  min="1"
+                  value={totalCapacity}
+                  onChange={(e) => setTotalCapacity(e.target.value)}
+                  placeholder="Total capacity"
                   className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] transition-all"
                 />
               </div>
@@ -435,11 +496,7 @@ export default function StepOptions() {
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3.5 bg-white">
               <p className="text-[14px] font-semibold text-[#3b5bdb] mb-3">Meal ticket</p>
-              <div className="flex flex-col gap-3">
-                {form.days.map((day) => (
-                  <DayPanel key={day.id} dayId={day.id} label={day.label} slots={day.slots} />
-                ))}
-              </div>
+              <MealSection />
             </div>
           </div>
         )}

@@ -148,8 +148,13 @@ export default function StepReviewDetails() {
                   <SubSection key={acc.id} title={acc.name} defaultOpen>
                     {acc.description && <p className="text-[12px] text-gray-500 mb-2 leading-relaxed">{acc.description}</p>}
                     <div className="flex items-center gap-1.5 text-[12px] text-gray-500 mb-1">
-                      <Users size={12} /> Capacity: {acc.capacity}
+                      <Users size={12} /> Per room: {acc.peoplePerRoom}
                     </div>
+                    {acc.totalCapacity > 0 && (
+                      <div className="flex items-center gap-1.5 text-[12px] text-gray-500 mb-1">
+                        <Users size={12} /> Total capacity: {acc.totalCapacity}
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5 text-[12px] text-gray-500">
                       <Hash size={12} /> Price: ₦{acc.price.toLocaleString()}
                     </div>

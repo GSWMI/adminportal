@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Pencil, Calendar, MapPin, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
-import { getEventById, updateEvent, type EventData } from '../../../services/eventService'
+import { getEventById, updateEvent, updateRegistration, type EventData } from '../../../services/eventService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
-const SECTIONS = ['Event info', 'Ticket type', 'Options, prices & quantity limit', 'Registration form']
+const SECTIONS = ['Event info', 'Ticket type', 'Options, prices & quantity limit', 'Registration form', 'Registration']
 
 function formatDate(s: string) {
   if (!s) return ''
@@ -220,6 +220,97 @@ function RegFormSection({ editing, onEdit }: { editing: boolean; onEdit: () => v
   )
 }
 
+
+// ── Toggle Switch ──
+function ToggleSwitch({ checked, onChange, loading }: { checked: boolean; onChange: () => void; loading?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      disabled={loading}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
+        checked ? 'bg-[#3b5bdb]' : 'bg-gray-200'
+      } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+        checked ? 'translate-x-4' : 'translate-x-1'
+      }`} />
+    </button>
+  )
+}
+
+// ── Registration Section ──
+function RegistrationSection({ event, onUpdate }: { event: EventData; onUpdate: (updates: Partial<EventData>) => void }) {
+  const [loadingType, setLoadingType] = useState<string | null>(null)
+
+  const toggle = async (type: 'meal' | 'accommodation' | 'transport' | 'all') => {
+    const currentVal = type === 'meal' ? event.mealRegistrationOpen
+      : type === 'accommodation' ? event.accommodationRegistrationOpen
+      : type === 'transport' ? event.transportRegistrationOpen
+      : event.registrationOpen
+    const newVal = !currentVal
+    setLoadingType(type)
+    try {
+      await updateRegistration(event._id, type, newVal)
+      const updates: Partial<EventData> = {}
+      if (type === 'meal' || type === 'all') updates.mealRegistrationOpen = newVal
+      if (type === 'accommodation' || type === 'all') updates.accommodationRegistrationOpen = newVal
+      if (type === 'transport' || type === 'all') updates.transportRegistrationOpen = newVal
+      if (type === 'all') updates.registrationOpen = newVal
+      onUpdate(updates)
+      const label = type === 'all' ? 'All registration' : `${type.charAt(0).toUpperCase() + type.slice(1)} registration`
+      toast.success(`${label} ${newVal ? 'opened' : 'closed'}`)
+    } catch {
+      toast.error('Failed to update registration')
+    } finally {
+      setLoadingType(null)
+    }
+  }
+
+  const rows: { type: 'meal' | 'accommodation' | 'transport'; label: string; key: keyof EventData }[] = [
+    { type: 'meal', label: 'Meal registration', key: 'mealRegistrationOpen' },
+    { type: 'accommodation', label: 'Accommodation registration', key: 'accommodationRegistrationOpen' },
+    { type: 'transport', label: 'Transport registration', key: 'transportRegistrationOpen' },
+  ]
+
+  return (
+    <div>
+      <h2 className="text-[15px] font-semibold text-[#3b5bdb] mb-5">Registration</h2>
+      <div className="flex flex-col gap-4">
+        {rows.map(({ type, label, key }) => (
+          event[key] !== undefined && (
+            <div key={type} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+              <div>
+                <p className="text-[14px] font-medium text-gray-800">{label}</p>
+                <p className={`text-[12px] mt-0.5 ${event[key] ? 'text-green-500' : 'text-red-400'}`}>
+                  {event[key] ? 'Open' : 'Closed'}
+                </p>
+              </div>
+              <ToggleSwitch
+                checked={!!event[key]}
+                onChange={() => toggle(type)}
+                loading={loadingType === type}
+              />
+            </div>
+          )
+        ))}
+
+        <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
+          <div>
+            <p className="text-[14px] font-medium text-gray-800">All registration</p>
+            <p className="text-[12px] text-gray-400 mt-0.5">Toggle all at once</p>
+          </div>
+          <ToggleSwitch
+            checked={!!event.registrationOpen}
+            onChange={() => toggle('all')}
+            loading={loadingType === 'all'}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SaveBtn({ dirty, saving, onSave }: { dirty: boolean; saving: boolean; onSave: () => void }) {
   return (
     <button
@@ -257,6 +348,10 @@ export default function TicketDetailPage() {
     }
     fetchEvent()
   }, [id])
+
+  const handleRegistrationUpdate = (updates: Partial<EventData>) => {
+    setEvent((prev) => prev ? { ...prev, ...updates } : prev)
+  }
 
   const handleSave = async (updates: Partial<EventData>) => {
     if (!event || !id) return
@@ -350,6 +445,12 @@ export default function TicketDetailPage() {
               <RegFormSection
                 editing={editingSection === 3}
                 onEdit={() => setEditingSection(3)}
+              />
+            )}
+            {activeSection === 4 && (
+              <RegistrationSection
+                event={event}
+                onUpdate={handleRegistrationUpdate}
               />
             )}
           </div>
