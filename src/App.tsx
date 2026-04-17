@@ -11,6 +11,8 @@ import PublicEventPage from './pages/tickets/PublicEventPage'
 import TicketDetailPage from './pages/tickets/detail/TicketDetailPage'
 import AttendeesPage from './pages/tickets/detail/AttendeesPage'
 import MealTicketsPage from './pages/tickets/detail/MealTicketsPage'
+import AccommodationTicketsPage from './pages/tickets/detail/AccommodationTicketsPage'
+import TransportTicketsPage from './pages/tickets/detail/TransportTicketsPage'
 import TransactionsPage from './pages/TransactionsPage'
 import TransactionDetailPage from './pages/transactions/TransactionDetailPage'
 import UsersPage from './pages/UsersPage'
@@ -33,6 +35,8 @@ export default function App() {
             <Route path="tickets/:id" element={<TicketDetailPage />} />
             <Route path="tickets/:id/attendees" element={<AttendeesPage />} />
             <Route path="tickets/:id/meal-tickets" element={<MealTicketsPage />} />
+            <Route path="tickets/:id/accommodation-tickets" element={<AccommodationTicketsPage />} />
+            <Route path="tickets/:id/transport-tickets" element={<TransportTicketsPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="transactions/:id" element={<TransactionDetailPage />} />
             <Route path="users" element={<UsersPage />} />

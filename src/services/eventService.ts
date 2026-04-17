@@ -17,28 +17,6 @@ export interface CustomQuestion {
   required: boolean
 }
 
-export interface EventData {
-  _id: string
-  name: string
-  description: string
-  startDate: string
-  endDate: string
-  totalDays: number
-  location?: string
-  bannerUrl?: string
-  slug?: string
-  mealOptions?: MealOptionGroup[]
-  customQuestions?: CustomQuestion[]
-  consentText?: string
-  registrationOpen: boolean
-  mealRegistrationOpen: boolean
-  accommodationRegistrationOpen: boolean
-  transportRegistrationOpen: boolean
-  mealPrices?: { breakfast: number; lunch: number; dinner: number }
-  createdAt: string
-  updatedAt: string
-}
-
 export interface AccommodationData {
   _id: string
   name: string
@@ -59,6 +37,30 @@ export interface TransportData {
   pickupLocation: string
   dropoffLocation: string
   eventId: string
+}
+
+export interface EventData {
+  _id: string
+  name: string
+  description: string
+  startDate: string
+  endDate: string
+  totalDays: number
+  location?: string
+  bannerUrl?: string
+  slug?: string
+  mealOptions?: MealOptionGroup[]
+  customQuestions?: CustomQuestion[]
+  consentText?: string
+  registrationOpen: boolean
+  mealRegistrationOpen: boolean
+  accommodationRegistrationOpen: boolean
+  transportRegistrationOpen: boolean
+  mealPrices?: { breakfast: number; lunch: number; dinner: number }
+  accommodations?: AccommodationData[]
+  transport?: TransportData[]
+  createdAt: string
+  updatedAt: string
 }
 
 // ── Events ──────────────────────────────────────────────────────────────────
