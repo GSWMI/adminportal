@@ -37,6 +37,7 @@ export interface OrderData {
   paymentReference?: string
   mealSelections?: MealSelection[]
   accommodationId?: string
+  transportId?: string
   wantsTransport?: boolean
   qrCodes?: QRCode[]
   paidAt?: string
@@ -51,12 +52,16 @@ export interface Pagination {
   total: number
 }
 
-export async function getAllOrders(): Promise<{ orders: OrderData[]; pagination: Pagination }> {
-  const { data } = await api.get('/orders')
-  return {
-    orders: Array.isArray(data.orders) ? data.orders : Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [],
-    pagination: data.pagination ?? { page: 1, pages: 1, limit: 20, total: 0 },
-  }
+export async function getAllOrders(eventId?: string): Promise<{ orders: OrderData[]; pagination: Pagination }> {
+  const params = eventId ? `?eventId=${eventId}` : ''
+  const { data } = await api.get(`/orders${params}`)
+  // Response shape: { success, data: { orders: [], pagination: {} } }
+  const inner = data?.data ?? data
+  const orders = Array.isArray(inner?.orders) ? inner.orders
+    : Array.isArray(inner) ? inner
+    : []
+  const pagination = inner?.pagination ?? { page: 1, pages: 1, limit: 20, total: orders.length }
+  return { orders, pagination }
 }
 
 export async function getOrderById(id: string): Promise<OrderData> {
@@ -69,8 +74,9 @@ export function getTicketTypes(order: OrderData): string[] {
   const types: string[] = []
   if (order.mealSelections && order.mealSelections.length > 0) types.push('Meal')
   if (order.accommodationId) types.push('Accommodation')
-  if (order.wantsTransport) types.push('Transport')
-  return types.length > 0 ? types : ['Meal']
+  // Check transportId or transport QR code since wantsTransport is not always returned
+  if (order.transportId || order.wantsTransport || order.qrCodes?.some((q) => q.type === 'transport')) types.push('Transport')
+  return types.length > 0 ? types : ['General']
 }
 
 // Map API paymentStatus to display status

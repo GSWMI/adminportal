@@ -216,7 +216,7 @@ function AccommodationSection() {
   const [openCards, setOpenCards] = useState<string[]>([])
   const [accDuplicateError, setAccDuplicateError] = useState('')
 
-  const isFilled = name.trim() && Number(peoplePerRoom) > 0 && Number(price) >= 0
+  const isFilled = name.trim() && Number(peoplePerRoom) > 0 && Number(price) > 0
 
   const handleAdd = () => {
     if (!isFilled) return
@@ -376,7 +376,7 @@ function TransportationSection() {
   const [price, setPrice] = useState('')
   const [pickupDuplicateError, setPickupDuplicateError] = useState('')
 
-  const isFilled = pickupLocation.trim() && Number(price) >= 0
+  const isFilled = pickupLocation.trim() && Number(price) > 0
 
   const handleAddPickup = () => {
     if (!isFilled) return

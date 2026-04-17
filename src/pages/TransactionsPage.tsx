@@ -122,8 +122,11 @@ export default function TransactionsPage() {
       try {
         setLoading(true)
         const result = await getAllOrders()
-        setOrders(result.orders)
-        setTotalPages(result.pagination.pages)
+        // Handle both { orders: [] } and flat array responses
+        const orders = Array.isArray(result.orders) ? result.orders : []
+        setOrders(orders)
+        setTotalPages(result.pagination?.pages ?? 1)
+        console.log('📋 Transactions loaded:', orders.length, 'orders')
       } catch {
         toast.error('Failed to load transactions')
       } finally {
