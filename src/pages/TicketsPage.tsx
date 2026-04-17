@@ -30,7 +30,7 @@ interface TicketCardProps {
   onRegistrationToggle: (id: string, type: 'meal' | 'accommodation' | 'transport' | 'all', open: boolean) => void
 }
 
-const PUBLIC_BASE_URL = 'https://gswmi-event.netlify.app'
+const PUBLIC_BASE_URL = 'https://gswmi-event2.netlify.app'
 
 function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: TicketCardProps) {
   const navigate = useNavigate()
@@ -170,7 +170,7 @@ function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: 
         </div>
       </div>
     </div>
-<div>
+ <div>
       {/* Share modal */}
       {showShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setShowShare(false)}>
