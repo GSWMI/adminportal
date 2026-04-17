@@ -74,8 +74,9 @@ export function getTicketTypes(order: OrderData): string[] {
   const types: string[] = []
   if (order.mealSelections && order.mealSelections.length > 0) types.push('Meal')
   if (order.accommodationId) types.push('Accommodation')
-  if (order.wantsTransport) types.push('Transport')
-  return types.length > 0 ? types : ['Meal']
+  // Check transportId or transport QR code since wantsTransport is not always returned
+  if (order.transportId || order.wantsTransport || order.qrCodes?.some((q) => q.type === 'transport')) types.push('Transport')
+  return types.length > 0 ? types : ['General']
 }
 
 // Map API paymentStatus to display status

@@ -70,7 +70,7 @@ export default function MealTicketsPage() {
     <div className="max-w-[1100px]">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(`/tickets/${id}`)} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={() => navigate('/tickets')} className="text-gray-400 hover:text-gray-600 transition-colors">
             <ArrowLeft size={18} />
           </button>
           <h1 className="text-[18px] font-semibold text-gray-900">Meal tickets</h1>

@@ -25,7 +25,7 @@ export default function TransportTicketsPage() {
           getEventById(id!),
         ])
         // Filter orders that have a transport QR code
-        setOrders(ordersResult.orders.filter((o) => o.qrCodes?.some((q) => q.type === 'transport')))
+        setOrders(ordersResult.orders.filter((o) => o.transportId || o.qrCodes?.some((q) => q.type === 'transport')))
         setEvent(eventData)
       } catch {
         toast.error('Failed to load transport tickets')
@@ -53,7 +53,7 @@ export default function TransportTicketsPage() {
   return (
     <div className="max-w-[1100px]">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(`/tickets/${id}`)} className="text-gray-400 hover:text-gray-600 transition-colors">
+        <button onClick={() => navigate('/tickets')} className="text-gray-400 hover:text-gray-600 transition-colors">
           <ArrowLeft size={18} />
         </button>
         <h1 className="text-[18px] font-semibold text-gray-900">Transport tickets</h1>
