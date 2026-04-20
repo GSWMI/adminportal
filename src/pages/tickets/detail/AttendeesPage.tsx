@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search,ExternalLink, XCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Search, ExternalLink, XCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { getAllOrders, resendTicket, getTicketTypes, type OrderData } from '../../../services/orderService'
 import { getEventById, updateRegistration } from '../../../services/eventService'
 import { exportAttendeesClientSide } from '../../../services/exportService'
@@ -26,6 +26,7 @@ export default function AttendeesPage() {
   const [exporting, setExporting] = useState(false)
   const [resendingId, setResendingId] = useState<string | null>(null)
   const [closingReg, setClosingReg] = useState(false)
+  const [regOpen, setRegOpen] = useState(true)
   const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
@@ -37,10 +38,10 @@ export default function AttendeesPage() {
           getAllOrders(),
           getEventById(id!),
         ])
-        // Filter orders by eventId
         const eventOrders = ordersResult.orders.filter((o) => o.eventId === id)
         setOrders(eventOrders)
         setEventName(event.name)
+        setRegOpen(event.registrationOpen ?? true)
       } catch {
         toast.error('Failed to load attendees')
       } finally {
@@ -62,14 +63,15 @@ export default function AttendeesPage() {
     }
   }
 
-  const handleCloseRegistration = async () => {
+  const handleToggleRegistration = async () => {
     if (!id) return
     setClosingReg(true)
     try {
-      await updateRegistration(id, 'all', false)
-      toast.success('Registration closed')
+      await updateRegistration(id, 'all', !regOpen)
+      setRegOpen((v) => !v)
+      toast.success(regOpen ? 'Registration closed' : 'Registration opened')
     } catch {
-      toast.error('Failed to close registration')
+      toast.error('Failed to update registration')
     } finally {
       setClosingReg(false)
     }
@@ -122,12 +124,16 @@ export default function AttendeesPage() {
             {exporting ? 'Exporting...' : 'Export'}
           </button>
           <button
-            onClick={handleCloseRegistration}
+            onClick={handleToggleRegistration}
             disabled={closingReg}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg text-[13px] font-medium hover:bg-red-600 transition-colors disabled:opacity-60"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-colors disabled:opacity-60 ${
+              regOpen
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-green-500 text-white hover:bg-green-600'
+            }`}
           >
-            {closingReg ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
-            {closingReg ? 'Closing...' : 'Close registration'}
+            {closingReg ? <Loader2 size={14} className="animate-spin" /> : regOpen ? <XCircle size={14} /> : <CheckCircle size={14} />}
+            {closingReg ? 'Updating...' : regOpen ? 'Close registration' : 'Open registration'}
           </button>
         </div>
       </div>
@@ -149,7 +155,7 @@ export default function AttendeesPage() {
           <select
             value={ticketFilter}
             onChange={(e) => { setTicketFilter(e.target.value); setPage(1) }}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:border-[#3b5bdb] bg-white"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:border-[#3b5bdb] bg-white"
           >
             <option value="all">All ticket types</option>
             <option value="meal">Meal only</option>
