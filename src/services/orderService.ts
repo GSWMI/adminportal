@@ -1,8 +1,16 @@
 import api from '../lib/axios'
 
+export interface MealItem {
+  slot: string
+  optionIndex: number
+  optionName: string
+  price: number
+  quantity: number
+}
+
 export interface MealSelection {
   day: number
-  meals: string[]
+  meals: MealItem[]
 }
 
 export interface QRCode {
@@ -10,7 +18,12 @@ export interface QRCode {
   type: 'meal' | 'transport' | 'accommodation'
   day?: number
   mealType?: string
+  optionName?: string
   direction?: string
+  pickupLocation?: string
+  accommodationId?: string
+  accommodationName?: string
+  quantity?: number
   redeemed: boolean
   redeemedAt?: string
 }
@@ -20,6 +33,11 @@ export interface OrderGuest {
   lastName: string
   email: string
   phone: string
+  gender?: string
+  nextOfKin?: {
+    fullName: string
+    email: string
+  }
 }
 
 export interface OrderData {

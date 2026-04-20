@@ -19,10 +19,9 @@ function SlotPanel({ dayId, slotId, slotName, options }: {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
-  const [limit, setLimit] = useState('')
   const [duplicateError, setDuplicateError] = useState('')
 
-  const isFilled = name.trim() && Number(price) >= 0 && Number(limit) > 0
+  const isFilled = name.trim() && Number(price) > 0
 
   const handleAdd = () => {
     if (!isFilled) return
@@ -39,9 +38,9 @@ function SlotPanel({ dayId, slotId, slotName, options }: {
       id: generateId(),
       name: name.trim(),
       price: Number(price),
-      limit: Math.min(5, Number(limit)),
+      limit: 5,
     })
-    setName(''); setPrice(''); setLimit('')
+    setName(''); setPrice('')
   }
 
   return (
@@ -60,7 +59,6 @@ function SlotPanel({ dayId, slotId, slotName, options }: {
                 <tr>
                   <th className="text-left text-[11px] font-medium text-gray-400 pb-2">Meal option</th>
                   <th className="text-left text-[11px] font-medium text-gray-400 pb-2">Price (₦)</th>
-                  <th className="text-left text-[11px] font-medium text-gray-400 pb-2">Limit</th>
                   <th className="w-6" />
                 </tr>
               </thead>
@@ -69,7 +67,6 @@ function SlotPanel({ dayId, slotId, slotName, options }: {
                   <tr key={opt.id} className="border-t border-gray-50">
                     <td className="py-2 text-[13px] text-gray-700 max-w-[180px] truncate pr-2">{opt.name}</td>
                     <td className="py-2 text-[13px] text-gray-700">₦{opt.price.toLocaleString()}</td>
-                    <td className="py-2 text-[13px] text-gray-700">{opt.limit}</td>
                     <td className="py-2">
                       <button onClick={() => removeMealOption(dayId, slotId, opt.id)}
                         className="text-red-500 hover:text-red-600 transition-colors">
@@ -101,19 +98,6 @@ function SlotPanel({ dayId, slotId, slotName, options }: {
                 className="w-full pl-6 pr-2 py-2 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] transition-all"
               />
             </div>
-            <input
-              type="number"
-              min={1}
-              max={5}
-              value={limit}
-              onChange={(e) => {
-                const clamped = Math.min(5, Math.max(1, Number(e.target.value)))
-                setLimit(clamped === 0 ? '' : String(clamped))
-              }}
-              onBlur={(e) => { if (Number(e.target.value) > 5) setLimit('5') }}
-              placeholder="1–5"
-              className="w-14 border border-gray-200 rounded-lg px-2 py-2 text-[13px] outline-none focus:border-[#3b5bdb] transition-all flex-shrink-0"
-            />
             <button
               onClick={handleAdd}
               disabled={!isFilled}
