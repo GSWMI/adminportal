@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search } from 'lucide-react'
+import { ArrowLeft, Search, Download, Loader2 } from 'lucide-react'
 import { getAllOrders, type OrderData } from '../../../services/orderService'
+import { updateRegistration } from '../../../services/eventService'
+import { exportMealTicketsClientSide } from '../../../services/exportService'
 import { getEventById } from '../../../services/eventService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -22,6 +24,9 @@ export default function MealTicketsPage() {
   const [eventName, setEventName] = useState('')
   const [totalDays, setTotalDays] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [mealRegOpen, setMealRegOpen] = useState(true)
+  const [closingReg, setClosingReg] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -35,6 +40,7 @@ export default function MealTicketsPage() {
         setOrders(ordersResult.orders)
         setEventName(event.name)
         setTotalDays(event.totalDays ?? 1)
+        setMealRegOpen(event.mealRegistrationOpen ?? true)
       } catch {
         toast.error('Failed to load meal tickets')
       } finally {
@@ -64,6 +70,23 @@ export default function MealTicketsPage() {
     r.orderNumber.toLowerCase().includes(search.toLowerCase())
   )
 
+  const handleExport = async () => {
+    setExporting(true)
+    try { exportMealTicketsClientSide(orders, eventName) } catch { toast.error('Export failed') }
+    finally { setExporting(false) }
+  }
+
+  const handleToggleReg = async () => {
+    if (!id) return
+    setClosingReg(true)
+    try {
+      await updateRegistration(id, 'meal', !mealRegOpen)
+      setMealRegOpen((v) => !v)
+      toast.success(`Meal registration ${!mealRegOpen ? 'opened' : 'closed'}`)
+    } catch { toast.error('Failed to update registration') }
+    finally { setClosingReg(false) }
+  }
+
   const days = Array.from({ length: totalDays }, (_, i) => i + 1)
 
   return (
@@ -75,6 +98,18 @@ export default function MealTicketsPage() {
           </button>
           <h1 className="text-[18px] font-semibold text-gray-900">Meal tickets</h1>
           {eventName && <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-medium">{eventName}</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handleToggleReg} disabled={closingReg}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium border transition-colors ${mealRegOpen ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'}`}>
+            {closingReg && <Loader2 size={13} className="animate-spin" />}
+            {mealRegOpen ? 'Close meal registration' : 'Open meal registration'}
+          </button>
+          <button onClick={handleExport} disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60">
+            {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            Export CSV
+          </button>
         </div>
       </div>
 

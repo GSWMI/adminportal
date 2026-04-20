@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search, SlidersHorizontal, ExternalLink, XCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Search,ExternalLink, XCircle, Loader2 } from 'lucide-react'
 import { getAllOrders, resendTicket, getTicketTypes, type OrderData } from '../../../services/orderService'
 import { getEventById, updateRegistration } from '../../../services/eventService'
-import { exportAttendeesCsv } from '../../../services/exportService'
+import { exportAttendeesClientSide } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -17,12 +17,11 @@ const TICKET_TYPE_COLORS: Record<string, string> = {
 export default function AttendeesPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [activeDay, setActiveDay] = useState(1)
   const [search, setSearch] = useState('')
+  const [ticketFilter, setTicketFilter] = useState<string>('all')
   const [page, setPage] = useState(1)
   const [orders, setOrders] = useState<OrderData[]>([])
   const [eventName, setEventName] = useState('')
-  const [totalDays, setTotalDays] = useState(3)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [resendingId, setResendingId] = useState<string | null>(null)
@@ -42,7 +41,6 @@ export default function AttendeesPage() {
         const eventOrders = ordersResult.orders.filter((o) => o.eventId === id)
         setOrders(eventOrders)
         setEventName(event.name)
-        setTotalDays(event.totalDays)
       } catch {
         toast.error('Failed to load attendees')
       } finally {
@@ -77,11 +75,16 @@ export default function AttendeesPage() {
     }
   }
 
-  const filtered = orders.filter((o) =>
-    !search ||
-    `${o.guest.firstName} ${o.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-    o.guest.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = orders.filter((o) => {
+    const matchSearch = !search ||
+      `${o.guest.firstName} ${o.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+      o.guest.email.toLowerCase().includes(search.toLowerCase()) ||
+      o.orderNumber.toLowerCase().includes(search.toLowerCase())
+    if (!matchSearch) return false
+    if (ticketFilter === 'all') return true
+    const types = getTicketTypes(o).map((t) => t.toLowerCase())
+    return types.includes(ticketFilter)
+  })
 
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
   const TOTAL_PAGES = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
@@ -104,8 +107,8 @@ export default function AttendeesPage() {
             onClick={async () => {
               setExporting(true)
               try {
-                await exportAttendeesCsv(id)
-                toast.success('Attendees exported successfully')
+                exportAttendeesClientSide(orders, eventName)
+                toast.success('Attendees exported!')
               } catch {
                 toast.error('Failed to export attendees')
               } finally {
@@ -133,28 +136,33 @@ export default function AttendeesPage() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Toolbar */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100">
-          <DayTabs active={activeDay} onChange={setActiveDay} total={totalDays} />
           <div className="flex-1" />
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search"
+              placeholder="Search by name, email or order number..."
               className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] w-52 transition-all"
             />
           </div>
-          <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors">
-            <SlidersHorizontal size={14} />
-            Filters
-          </button>
+          <select
+            value={ticketFilter}
+            onChange={(e) => { setTicketFilter(e.target.value); setPage(1) }}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:border-[#3b5bdb] bg-white"
+          >
+            <option value="all">All ticket types</option>
+            <option value="meal">Meal only</option>
+            <option value="accommodation">Accommodation only</option>
+            <option value="transport">Transport only</option>
+          </select>
         </div>
 
         {/* Table */}
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100">
-              {['Name', 'Email', 'Phone', 'Ticket purchased', 'Action'].map((h) => (
+              {['Name', 'Email', 'Phone', 'Gender', 'Next of kin', 'Ticket purchased', 'Action'].map((h) => (
                 <th key={h} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500 whitespace-nowrap">
                   <span className="flex items-center gap-1">
                     {h}
@@ -170,14 +178,14 @@ export default function AttendeesPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <td key={j} className="px-5 py-3.5"><Skeleton height={14} /></td>
                   ))}
                 </tr>
               ))
             ) : paginated.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-[13px] text-gray-400">
+                <td colSpan={7} className="px-5 py-12 text-center text-[13px] text-gray-400">
                   {search ? 'No attendees match your search' : 'No attendees for this event yet'}
                 </td>
               </tr>
@@ -191,6 +199,15 @@ export default function AttendeesPage() {
                     </td>
                     <td className="px-5 py-3.5 text-[13px] text-gray-600">{order.guest.email}</td>
                     <td className="px-5 py-3.5 text-[13px] text-gray-600">{order.guest.phone}</td>
+                    <td className="px-5 py-3.5 text-[13px] text-gray-600 capitalize">{order.guest.gender ?? '—'}</td>
+                    <td className="px-5 py-3.5">
+                      {order.guest.nextOfKin ? (
+                        <div>
+                          <p className="text-[13px] text-gray-700">{order.guest.nextOfKin.fullName}</p>
+                          <p className="text-[11px] text-gray-400">{order.guest.nextOfKin.email}</p>
+                        </div>
+                      ) : <span className="text-[13px] text-gray-400">—</span>}
+                    </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {ticketTypes.map((t) => (
@@ -232,19 +249,6 @@ export default function AttendeesPage() {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function DayTabs({ active, onChange, total }: { active: number; onChange: (n: number) => void; total: number }) {
-  return (
-    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-      {Array.from({ length: total }, (_, i) => i + 1).map((day) => (
-        <button key={day} onClick={() => onChange(day)}
-          className={`px-3.5 py-1.5 text-[12px] font-medium transition-colors ${active === day ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-          Day {day}
-        </button>
-      ))}
     </div>
   )
 }

@@ -114,7 +114,18 @@ export default function TransactionDetailPage() {
           />
           <Row
             left={<Field label="Email address" value={order.guest.email} />}
-            right={<Field label="Phone number" value={order.guest.phone} />}
+            right={<Field label="WhatsApp phone" value={order.guest.phone} />}
+          />
+          <Row
+            left={<Field label="Gender" value={order.guest.gender ?? '—'} />}
+            right={
+              order.guest.nextOfKin ? (
+                <p className="text-[13px] text-gray-500">
+                  Next of kin: <span className="text-gray-800 font-medium">{order.guest.nextOfKin.fullName}</span>
+                  <span className="text-gray-400"> · {order.guest.nextOfKin.email}</span>
+                </p>
+              ) : <span />
+            }
           />
         </Section>
 
@@ -164,6 +175,86 @@ export default function TransactionDetailPage() {
             <span className="text-[13px] text-gray-800 font-semibold">₦{order.totalAmount?.toLocaleString()}</span>
           </div>
         </Section>
+
+        {/* Meal breakdown */}
+        {order.mealSelections && order.mealSelections.some((s) => s.meals.length > 0) && (
+          <>
+            <div className="border-t border-gray-100 mb-5" />
+            <Section label="Meal breakdown">
+              {order.mealSelections.map((sel) => (
+                sel.meals.map((meal, i) => (
+                  <div key={`${sel.day}-${i}`} className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-[11px] font-medium">Day {sel.day}</span>
+                      <span className="text-[13px] text-gray-500 capitalize">{meal.slot}</span>
+                      <span className="text-[13px] text-gray-800">{meal.optionName}</span>
+                      <span className="text-[12px] text-gray-400">×{meal.quantity}</span>
+                    </div>
+                    <span className="text-[13px] text-gray-800 font-medium">₦{(meal.price * meal.quantity).toLocaleString()}</span>
+                  </div>
+                ))
+              ))}
+            </Section>
+          </>
+        )}
+
+        {/* Accommodation */}
+        {order.qrCodes?.some((q) => q.type === 'accommodation') && (
+          <>
+            <div className="border-t border-gray-100 mb-5" />
+            <Section label="Accommodation">
+              {order.qrCodes.filter((q) => q.type === 'accommodation').map((qr) => (
+                <Row key={qr.code}
+                  left={<Field label="Type" value={qr.accommodationName ?? '—'} />}
+                  right={<Field label="Amount" value={`₦${order.accommodationTotal?.toLocaleString() ?? '—'}`} />}
+                />
+              ))}
+            </Section>
+          </>
+        )}
+
+        {/* Transport */}
+        {order.qrCodes?.some((q) => q.type === 'transport') && (
+          <>
+            <div className="border-t border-gray-100 mb-5" />
+            <Section label="Transportation">
+              {order.qrCodes.filter((q) => q.type === 'transport').map((qr) => (
+                <Row key={qr.code}
+                  left={<Field label="Pickup location" value={qr.pickupLocation ?? '—'} />}
+                  right={<Field label="Amount" value={`₦${order.transportTotal?.toLocaleString() ?? '—'}`} />}
+                />
+              ))}
+            </Section>
+          </>
+        )}
+
+        {/* QR Codes */}
+        {order.qrCodes && order.qrCodes.length > 0 && (
+          <>
+            <div className="border-t border-gray-100 mb-5" />
+            <Section label="QR Codes">
+              <div className="flex flex-col gap-2">
+                {order.qrCodes.map((qr) => (
+                  <div key={qr.code} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium border capitalize ${
+                        qr.type === 'meal' ? 'bg-blue-50 text-blue-600 border-blue-200'
+                        : qr.type === 'accommodation' ? 'bg-purple-50 text-purple-600 border-purple-200'
+                        : 'bg-teal-50 text-teal-600 border-teal-200'
+                      }`}>
+                        {qr.type}{qr.day ? ` · Day ${qr.day}` : ''}{qr.mealType ? ` · ${qr.mealType}` : ''}{qr.pickupLocation ? ` · ${qr.pickupLocation}` : ''}{qr.accommodationName ? ` · ${qr.accommodationName}` : ''}
+                      </span>
+                      <span className="text-[13px] font-mono text-gray-700">{qr.code}</span>
+                    </div>
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${qr.redeemed ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
+                      {qr.redeemed ? 'Redeemed' : 'Valid'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </>
+        )}
 
         <div className="border-t border-gray-100 mb-5" />
 

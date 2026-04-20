@@ -97,36 +97,11 @@ function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: 
                     Archive event
                   </button>
                   <div className="border-t border-gray-100 my-1" />
-                  <p className="px-4 py-1 text-[11px] text-gray-400 uppercase tracking-wide font-medium">Toggle registration</p>
-                  {event.mealRegistrationOpen !== undefined && (
-                    <button
-                      onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'meal', !event.mealRegistrationOpen) }}
-                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                    >
-                      {event.mealRegistrationOpen ? 'Close meal' : 'Open meal'}
-                    </button>
-                  )}
-                  {event.accommodationRegistrationOpen !== undefined && (
-                    <button
-                      onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'accommodation', !event.accommodationRegistrationOpen) }}
-                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                    >
-                      {event.accommodationRegistrationOpen ? 'Close accommodation' : 'Open accommodation'}
-                    </button>
-                  )}
-                  {event.transportRegistrationOpen !== undefined && (
-                    <button
-                      onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'transport', !event.transportRegistrationOpen) }}
-                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                    >
-                      {event.transportRegistrationOpen ? 'Close transport' : 'Open transport'}
-                    </button>
-                  )}
                   <button
                     onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'all', !event.registrationOpen) }}
                     className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
-                    {event.registrationOpen ? 'Close all' : 'Open all'}
+                    {event.registrationOpen ? 'Close all registration' : 'Open all registration'}
                   </button>
                 </div>
               )}
@@ -170,7 +145,7 @@ function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: 
         </div>
       </div>
     </div>
- <div>
+<div>
       {/* Share modal */}
       {showShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setShowShare(false)}>
