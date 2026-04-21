@@ -11,7 +11,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
-
+  console.log("The BASE URL");
+  console.log(import.meta.env.VITE_API_BASE_URL);
   // All hooks must be called before any early return
   const formik = useFormik({
     initialValues: loginInitialValues,
