@@ -11,9 +11,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
-  console.log("The BASE URL");
-  console.log(import.meta.env.VITE_API_BASE_URL);
-  // All hooks must be called before any early return
+
   const formik = useFormik({
     initialValues: loginInitialValues,
     validationSchema: loginSchema,
@@ -21,8 +19,8 @@ export default function LoginPage() {
     validateOnBlur: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        const { token, user } = await loginUser(values)
-        login(token, user)
+        const { token, refreshToken, user } = await loginUser(values)
+        login(token, user, refreshToken)
         toast.success('Welcome back!')
         navigate('/dashboard')
       } catch (err: unknown) {
@@ -36,7 +34,6 @@ export default function LoginPage() {
     },
   })
 
-  // Early return AFTER all hooks
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />
   }

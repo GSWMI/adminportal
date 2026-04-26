@@ -21,7 +21,7 @@ export default function App() {
   return (
     <>
       <Toaster position="top-right" richColors />
-      <BrowserRouter basename="/admin-portal">
+      <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/tickets/preview" element={<ProtectedRoute><TicketPreviewPage /></ProtectedRoute>} />

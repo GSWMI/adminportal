@@ -11,7 +11,7 @@ interface AuthState {
   token: string | null
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (token: string, user: AuthUser) => void
+  login: (token: string, user: AuthUser, refreshToken?: string) => void
   logout: () => void
 }
 
@@ -23,15 +23,19 @@ export const useAuthStore = create<AuthState>()((set) => ({
   })(),
   isAuthenticated: !!localStorage.getItem('gswmi_token'),
 
-  login: (token, user) => {
+  login: (token, user, refreshToken) => {
     localStorage.setItem('gswmi_token', token)
     localStorage.setItem('gswmi_user', JSON.stringify(user))
+    if (refreshToken) {
+      localStorage.setItem('gswmi_refresh_token', refreshToken)
+    }
     set({ token, user, isAuthenticated: true })
   },
 
   logout: () => {
     localStorage.removeItem('gswmi_token')
     localStorage.removeItem('gswmi_user')
+    localStorage.removeItem('gswmi_refresh_token')
     set({ token: null, user: null, isAuthenticated: false })
   },
 }))

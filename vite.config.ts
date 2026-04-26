@@ -5,11 +5,10 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/admin-portal/',
   server: {
     proxy: {
       '/api': {
-        target: 'https://gswmi-backend.onrender.com',
+        target: 'https://ticket-booking-dev.onrender.com',
         changeOrigin: true,
         secure: true,
       }

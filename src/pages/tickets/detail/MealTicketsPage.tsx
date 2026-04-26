@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, Download, Loader2 } from 'lucide-react'
-import { getAllOrders, type OrderData } from '../../../services/orderService'
-import { updateRegistration } from '../../../services/eventService'
-import { exportMealTicketsClientSide } from '../../../services/exportService'
-import { getEventById } from '../../../services/eventService'
+import { getMealTickets, type MealTicketRow } from '../../../services/orderService'
+import { updateRegistration, getEventById } from '../../../services/eventService'
+import { exportMealTicketsCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -20,7 +19,7 @@ export default function MealTicketsPage() {
   const navigate = useNavigate()
   const [activeDay, setActiveDay] = useState(1)
   const [search, setSearch] = useState('')
-  const [orders, setOrders] = useState<OrderData[]>([])
+  const [list, setList] = useState<MealTicketRow[]>([])
   const [eventName, setEventName] = useState('')
   const [totalDays, setTotalDays] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -33,46 +32,21 @@ export default function MealTicketsPage() {
     async function fetchData() {
       setLoading(true)
       try {
-        const [ordersResult, event] = await Promise.all([
-          getAllOrders(id),
-          getEventById(id!),
-        ])
-        setOrders(ordersResult.orders)
+        const [result, event] = await Promise.all([getMealTickets(id!), getEventById(id!)])
+        setList(result.list)
         setEventName(event.name)
         setTotalDays(event.totalDays ?? 1)
         setMealRegOpen(event.mealRegistrationOpen ?? true)
-      } catch {
-        toast.error('Failed to load meal tickets')
-      } finally {
-        setLoading(false)
-      }
+      } catch { toast.error('Failed to load meal tickets') }
+      finally { setLoading(false) }
     }
     fetchData()
   }, [id])
 
-  // Drive from qrCodes — each meal QR has slot, optionName, day, quantity
-  const mealRows = orders.flatMap((order) => {
-    const mealQrs = order.qrCodes?.filter((q) => q.type === 'meal' && q.day === activeDay) ?? []
-    if (mealQrs.length === 0) return []
-    return mealQrs.map((qr) => ({
-      orderId: order._id,
-      orderNumber: order.orderNumber,
-      name: `${order.guest.firstName} ${order.guest.lastName}`,
-      email: order.guest.email,
-      slot: qr.mealType ?? '',
-      optionName: (qr as { optionName?: string }).optionName ?? '',
-      quantity: (qr as { quantity?: number }).quantity ?? 1,
-      qr,
-    }))
-  }).filter((r) =>
-    !search ||
-    r.name.toLowerCase().includes(search.toLowerCase()) ||
-    r.orderNumber.toLowerCase().includes(search.toLowerCase())
-  )
-
   const handleExport = async () => {
     setExporting(true)
-    try { exportMealTicketsClientSide(orders, eventName) } catch { toast.error('Export failed') }
+    try { await exportMealTicketsCsv(id); toast.success('Meal tickets exported') }
+    catch { toast.error('Export failed') }
     finally { setExporting(false) }
   }
 
@@ -86,6 +60,14 @@ export default function MealTicketsPage() {
     } catch { toast.error('Failed to update registration') }
     finally { setClosingReg(false) }
   }
+
+  const filtered = list
+    .filter((r) => r.day === activeDay)
+    .filter((r) =>
+      !search ||
+      `${r.guest.firstName} ${r.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+      r.orderNumber.toLowerCase().includes(search.toLowerCase())
+    )
 
   const days = Array.from({ length: totalDays }, (_, i) => i + 1)
 
@@ -113,19 +95,15 @@ export default function MealTicketsPage() {
         </div>
       </div>
 
-      {/* Day tabs */}
       <div className="flex items-center gap-2 mb-6 flex-wrap">
         {days.map((day) => (
           <button key={day} onClick={() => setActiveDay(day)}
-            className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${
-              activeDay === day ? 'bg-[#3b5bdb] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-            }`}>
+            className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${activeDay === day ? 'bg-[#3b5bdb] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}>
             Day {day}
           </button>
         ))}
       </div>
 
-      {/* Search */}
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input value={search} onChange={(e) => setSearch(e.target.value)}
@@ -133,53 +111,54 @@ export default function MealTicketsPage() {
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#3b5bdb]" />
       </div>
 
-      {loading ? (
-        <Skeleton count={5} height={52} className="mb-2" />
-      ) : mealRows.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-[14px] text-gray-400">No meal tickets for Day {activeDay}</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left text-[12px] text-gray-500 font-medium px-5 py-3">Attendee</th>
-                <th className="text-left text-[12px] text-gray-500 font-medium px-5 py-3">Slot</th>
-                <th className="text-left text-[12px] text-gray-500 font-medium px-5 py-3">Meal option</th>
-                <th className="text-left text-[12px] text-gray-500 font-medium px-5 py-3">Qty</th>
-                <th className="text-left text-[12px] text-gray-500 font-medium px-5 py-3">QR code</th>
-                <th className="text-left text-[12px] text-gray-500 font-medium px-5 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mealRows.map((row, i) => (
-                <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
-                  <td className="px-5 py-3.5">
-                    <p className="text-[13px] font-medium text-gray-900">{row.name}</p>
-                    <p className="text-[11px] text-gray-400">{row.email}</p>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border capitalize ${SLOT_COLORS[row.slot.toLowerCase()] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                      {row.slot}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-[13px] text-gray-700">{row.optionName || '—'}</td>
-                  <td className="px-5 py-3.5 text-[13px] text-gray-700">{row.quantity}</td>
-                  <td className="px-5 py-3.5 text-[12px] text-gray-400 font-mono">{row.qr?.code ?? '—'}</td>
-                  <td className="px-5 py-3.5">
-                    {row.qr ? (
-                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${row.qr.redeemed ? 'bg-gray-50 text-gray-500 border-gray-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
-                        {row.qr.redeemed ? 'Redeemed' : 'Valid'}
-                      </span>
-                    ) : <span className="text-[11px] text-gray-300">—</span>}
-                  </td>
+      {loading ? <Skeleton count={5} height={52} className="mb-2" />
+        : filtered.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <p className="text-[14px] text-gray-400">No meal tickets for Day {activeDay}</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {['Attendee', 'Order #', 'Slot', 'Meal option', 'Qty', 'Price (₦)', 'QR code', 'Status'].map((h) => (
+                    <th key={h} className="text-left text-[12px] text-gray-500 font-medium px-5 py-3">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {filtered.map((row, i) => {
+                  const qr = row.qrCodes?.[0]
+                  return (
+                    <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                      <td className="px-5 py-3.5">
+                        <p className="text-[13px] font-medium text-gray-900">{row.guest.firstName} {row.guest.lastName}</p>
+                        <p className="text-[11px] text-gray-400">{row.guest.email}</p>
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-600 font-mono">{row.orderNumber}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border capitalize ${SLOT_COLORS[row.slot.toLowerCase()] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                          {row.slot}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-700">{row.optionName || '—'}</td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-700">{row.quantity}</td>
+                      <td className="px-5 py-3.5 text-[13px] text-gray-700">₦{row.price.toLocaleString()}</td>
+                      <td className="px-5 py-3.5 text-[12px] text-gray-400 font-mono">{qr?.code ?? '—'}</td>
+                      <td className="px-5 py-3.5">
+                        {qr ? (
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${qr.redeemed ? 'bg-gray-50 text-gray-500 border-gray-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
+                            {qr.redeemed ? 'Redeemed' : 'Valid'}
+                          </span>
+                        ) : <span className="text-[11px] text-gray-300">—</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
     </div>
   )
 }

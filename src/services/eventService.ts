@@ -63,26 +63,33 @@ export interface EventData {
   updatedAt: string
 }
 
-// ── Events ──────────────────────────────────────────────────────────────────
+// ── Events ────────────────────────────────────────────────────────────────────
+
+function normalizeEvent(raw: Record<string, unknown>): EventData {
+  return { ...raw, _id: (raw._id ?? raw.id ?? '') as string } as EventData
+}
 
 export async function getAllEvents(): Promise<EventData[]> {
   const { data } = await api.get('/events/')
-  if (Array.isArray(data?.data?.events)) return data.data.events
-  if (Array.isArray(data?.events)) return data.events
-  if (Array.isArray(data?.data)) return data.data
-  if (Array.isArray(data)) return data
-  if (data?._id) return [data]
-  return []
+  let raw: unknown[] = []
+  if (Array.isArray(data?.data?.events)) raw = data.data.events
+  else if (Array.isArray(data?.events)) raw = data.events
+  else if (Array.isArray(data?.data)) raw = data.data
+  else if (Array.isArray(data)) raw = data
+  else if (data?._id || data?.id) raw = [data]
+  return raw.map((e) => normalizeEvent(e as Record<string, unknown>))
 }
 
 export async function getEventById(id: string): Promise<EventData> {
   const { data } = await api.get(`/events/${id}`)
-  return data?.data?.event ?? data?.data ?? data?.event ?? data
+  const raw = data?.data?.event ?? data?.data ?? data?.event ?? data
+  return normalizeEvent(raw)
 }
 
 export async function getEventBySlug(slug: string): Promise<EventData> {
   const { data } = await api.get(`/events/s/${slug}`)
-  return data?.data?.event ?? data?.data ?? data?.event ?? data
+  const raw = data?.data?.event ?? data?.data ?? data?.event ?? data
+  return normalizeEvent(raw)
 }
 
 export async function createEvent(payload: FormData | object): Promise<EventData> {
@@ -90,12 +97,12 @@ export async function createEvent(payload: FormData | object): Promise<EventData
   const { data } = await api.post('/events/', payload, {
     headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' },
   })
-  return data?.data?.event ?? data?.data ?? data?.event ?? data
+  return normalizeEvent(data?.data?.event ?? data?.data ?? data?.event ?? data)
 }
 
 export async function updateEvent(id: string, payload: object): Promise<EventData> {
   const { data } = await api.put(`/events/${id}`, payload)
-  return data?.data?.event ?? data?.data ?? data?.event ?? data
+  return normalizeEvent(data?.data?.event ?? data?.data ?? data?.event ?? data)
 }
 
 export async function deleteEvent(id: string): Promise<void> {
@@ -110,7 +117,7 @@ export async function updateRegistration(
   await api.post(`/events/${id}/registration`, { type, open })
 }
 
-// ── Accommodation ────────────────────────────────────────────────────────────
+// ── Accommodation ─────────────────────────────────────────────────────────────
 
 export async function createAccommodation(payload: object): Promise<AccommodationData> {
   const { data } = await api.post('/events/accommodation', payload)
@@ -123,35 +130,45 @@ export async function updateAccommodation(id: string, payload: object): Promise<
 }
 
 export async function getEventAccommodations(eventId: string): Promise<AccommodationData[]> {
-  const { data } = await api.get(`/events/accommodation/${eventId}`)
+  const { data } = await api.get(`/events/${eventId}/accommodations`)
   const inner = data?.data ?? data
   if (Array.isArray(inner)) return inner
   if (Array.isArray(inner?.accommodations)) return inner.accommodations
   return []
 }
 
+export async function getAccommodationById(accommodationId: string): Promise<AccommodationData> {
+  const { data } = await api.get(`/events/accommodations/${accommodationId}`)
+  return data?.data?.accommodation ?? data?.data ?? data?.accommodation ?? data
+}
+
 export async function deleteAccommodation(id: string): Promise<void> {
   await api.delete(`/events/accommodation/${id}`)
 }
 
-// ── Transport ────────────────────────────────────────────────────────────────
+// ── Transport ─────────────────────────────────────────────────────────────────
 
 export async function createTransport(payload: object): Promise<TransportData> {
   const { data } = await api.post('/events/transport', payload)
   return data?.data?.transport ?? data?.data ?? data?.transport ?? data
 }
 
-export async function updateTransport(id: string, payload: object): Promise<TransportData> {
+export async function updateTransportById(id: string, payload: object): Promise<TransportData> {
   const { data } = await api.put(`/events/transport/${id}`, payload)
   return data?.data?.transport ?? data?.data ?? data?.transport ?? data
 }
 
 export async function getEventTransport(eventId: string): Promise<TransportData[]> {
-  const { data } = await api.get(`/events/transport/${eventId}`)
+  const { data } = await api.get(`/events/${eventId}/transports`)
   const inner = data?.data ?? data
   if (Array.isArray(inner)) return inner
   if (Array.isArray(inner?.transport)) return inner.transport
   return []
+}
+
+export async function getTransportById(transportId: string): Promise<TransportData> {
+  const { data } = await api.get(`/events/transports/${transportId}`)
+  return data?.data?.transport ?? data?.data ?? data?.transport ?? data
 }
 
 export async function deleteTransport(id: string): Promise<void> {
@@ -160,13 +177,49 @@ export async function deleteTransport(id: string): Promise<void> {
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
-export async function getDashboardStats(eventId: string): Promise<Record<string, unknown>> {
-  const { data } = await api.get(`/events/admin/dashboard?eventId=${eventId}`)
+export async function getDashboardStats(eventId?: string): Promise<Record<string, unknown>> {
+  const params = eventId ? `?eventId=${eventId}` : ''
+  const { data } = await api.get(`/events/admin/dashboard${params}`)
   return data?.data ?? data
 }
 
+// ── Activity Log ──────────────────────────────────────────────────────────────
+
+// Actual API shape (confirmed from network tab):
+// {
+//   "id": "69ee5f5e...",
+//   "action": "create",
+//   "entity": "order" | "event" | ...,
+//   "entityId": "...",
+//   "userId": "..." (optional — absent on guest-created orders),
+//   "details": {
+//     "orderNumber": "ORD-...",  (for orders)
+//     "guest": "email@...",       (for orders)
+//     "name": "Event Name"        (for events)
+//   },
+//   "createdAt": "...",
+//   "updatedAt": "..."
+// }
+export interface ActivityLogItem {
+  id: string        // backend returns "id" not "_id"
+  action: string
+  entity: string
+  entityId?: string
+  userId?: string   // admin user ID — absent for guest actions
+  details?: {
+    orderNumber?: string
+    guest?: string  // guest email for order logs
+    name?: string   // event name for event logs
+  }
+  createdAt: string
+  updatedAt?: string
+}
+
 export async function getActivityLog(params?: {
-  entity?: string; action?: string; page?: number; limit?: number
+  entity?: string
+  action?: string
+  page?: number
+  limit?: number
 }): Promise<{ logs: ActivityLogItem[]; pagination: { page: number; pages: number; total: number } }> {
   const query = new URLSearchParams()
   if (params?.entity) query.set('entity', params.entity)
@@ -178,13 +231,4 @@ export async function getActivityLog(params?: {
     logs: data?.data?.logs ?? data?.data ?? data?.logs ?? [],
     pagination: data?.data?.pagination ?? data?.pagination ?? { page: 1, pages: 1, total: 0 },
   }
-}
-
-export interface ActivityLogItem {
-  _id: string
-  entity: string
-  action: string
-  description?: string
-  performedBy?: { firstName: string; lastName: string; email: string }
-  createdAt: string
 }
