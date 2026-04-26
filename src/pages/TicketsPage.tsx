@@ -30,7 +30,7 @@ interface TicketCardProps {
   onRegistrationToggle: (id: string, type: 'meal' | 'accommodation' | 'transport' | 'all', open: boolean) => void
 }
 
-const PUBLIC_BASE_URL = 'https://gswmi-event2.netlify.app'
+const PUBLIC_BASE_URL = 'https://logistics.gswmi.com/attendee-reg'
 
 function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: TicketCardProps) {
   const navigate = useNavigate()
