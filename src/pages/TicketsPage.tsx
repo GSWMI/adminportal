@@ -11,7 +11,6 @@ function formatDate(s: string) {
   return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-// Determine upcoming vs past based on endDate
 function getStatus(event: EventData): 'upcoming' | 'past' {
   return new Date(event.endDate) >= new Date() ? 'upcoming' : 'past'
 }
@@ -30,7 +29,7 @@ interface TicketCardProps {
   onRegistrationToggle: (id: string, type: 'meal' | 'accommodation' | 'transport' | 'all', open: boolean) => void
 }
 
-const PUBLIC_BASE_URL = 'https://logistics.gswmi.com/attendee-reg'
+const PUBLIC_BASE_URL = 'https://events.gswmi.com'
 
 function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: TicketCardProps) {
   const navigate = useNavigate()
@@ -54,98 +53,101 @@ function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: 
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // Guard against missing _id
+  if (!event._id) return null
+
   return (
     <>
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <div className="flex gap-5">
-        {/* Banner */}
-        <div className="w-[160px] h-[120px] rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-          {event.bannerUrl
-            ? <img src={event.bannerUrl} alt={event.name} className="w-full h-full object-cover" />
-            : <div className="w-full h-full bg-gradient-to-br from-purple-400 to-orange-400" />
-          }
-        </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex gap-5">
+          {/* Banner */}
+          <div className="w-[160px] h-[120px] rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+            {event.bannerUrl
+              ? <img src={event.bannerUrl} alt={event.name} className="w-full h-full object-cover" />
+              : <div className="w-full h-full bg-gradient-to-br from-purple-400 to-orange-400" />
+            }
+          </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-[16px] font-semibold text-gray-900">{event.name}</h3>
-            <div className="relative flex-shrink-0">
-              <button
-                onClick={() => setOpenMenuId(menuOpen ? null : event._id)}
-                className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-400"
-              >
-                <MoreVertical size={16} />
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[185px]">
-                  <button
-                    onClick={() => { setOpenMenuId(null); navigate(`/tickets/${event._id}`) }}
-                    className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                  >
-                    View details
-                  </button>
-                  <button
-                    onClick={() => { setOpenMenuId(null); setShowShare(true) }}
-                    className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                  >
-                    Share event link
-                  </button>
-                  <button
-                    onClick={() => { setOpenMenuId(null); toast('Archive coming soon') }}
-                    className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                  >
-                    Archive event
-                  </button>
-                  <div className="border-t border-gray-100 my-1" />
-                  <button
-                    onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'all', !event.registrationOpen) }}
-                    className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                  >
-                    {event.registrationOpen ? 'Close all registration' : 'Open all registration'}
-                  </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h3 className="text-[16px] font-semibold text-gray-900">{event.name}</h3>
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setOpenMenuId(menuOpen ? null : event._id)}
+                  className="p-1.5 rounded hover:bg-gray-100 transition-colors text-gray-400"
+                >
+                  <MoreVertical size={16} />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[185px]">
+                    <button
+                      onClick={() => { setOpenMenuId(null); navigate(`/tickets/${event._id}`) }}
+                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      View details
+                    </button>
+                    <button
+                      onClick={() => { setOpenMenuId(null); setShowShare(true) }}
+                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      Share event link
+                    </button>
+                    <button
+                      onClick={() => { setOpenMenuId(null); toast('Archive coming soon') }}
+                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      Archive event
+                    </button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button
+                      onClick={() => { setOpenMenuId(null); onRegistrationToggle(event._id, 'all', !event.registrationOpen) }}
+                      className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    >
+                      {event.registrationOpen ? 'Close all registration' : 'Open all registration'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-[13px] text-gray-500 mb-3 line-clamp-2">{event.description}</p>
+
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-1.5 text-[12px] text-gray-500">
+                <Calendar size={13} className="text-gray-400" />
+                {formatDate(event.startDate)} — {formatDate(event.endDate)}
+              </div>
+              {event.location && (
+                <div className="flex items-center gap-1.5 text-[12px] text-[#3b5bdb]">
+                  <MapPin size={13} />
+                  {event.location}
                 </div>
               )}
+              {!event.registrationOpen && (
+                <span className="px-2 py-0.5 bg-red-50 text-red-500 border border-red-200 rounded-full text-[11px] font-medium">
+                  Registration closed
+                </span>
+              )}
             </div>
-          </div>
 
-          <p className="text-[13px] text-gray-500 mb-3 line-clamp-2">{event.description}</p>
-
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex items-center gap-1.5 text-[12px] text-gray-500">
-              <Calendar size={13} className="text-gray-400" />
-              {formatDate(event.startDate)} — {formatDate(event.endDate)}
+            <div className="flex items-center gap-2 flex-wrap">
+              {TYPE_BUTTONS.map(({ key, label, path }) => (
+                <button
+                  key={key}
+                  onClick={() => navigate(`/tickets/${event._id}/${path}`)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-[#3b5bdb]/40 text-[#3b5bdb] rounded-lg text-[12px] font-medium hover:bg-blue-50 transition-colors"
+                >
+                  {label}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              ))}
             </div>
-            {event.location && (
-              <div className="flex items-center gap-1.5 text-[12px] text-[#3b5bdb]">
-                <MapPin size={13} />
-                {event.location}
-              </div>
-            )}
-            {!event.registrationOpen && (
-              <span className="px-2 py-0.5 bg-red-50 text-red-500 border border-red-200 rounded-full text-[11px] font-medium">
-                Registration closed
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {TYPE_BUTTONS.map(({ key, label, path }) => (
-              <button
-                key={key}
-                onClick={() => navigate(`/tickets/${event._id}/${path}`)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-[#3b5bdb]/40 text-[#3b5bdb] rounded-lg text-[12px] font-medium hover:bg-blue-50 transition-colors"
-              >
-                {label}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            ))}
           </div>
         </div>
       </div>
-    </div>
-<div>
+
       {/* Share modal */}
       {showShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setShowShare(false)}>
@@ -197,7 +199,6 @@ function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: 
           </div>
         </div>
       )}
-    </div>
     </>
   )
 }
@@ -252,7 +253,6 @@ export default function TicketsPage() {
     fetchEvents()
   }, [])
 
-  // Close menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {

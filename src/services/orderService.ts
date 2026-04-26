@@ -26,6 +26,7 @@ export interface QRCode {
   quantity?: number
   redeemed: boolean
   redeemedAt?: string
+  qrImage?: string
 }
 
 export interface OrderGuest {
@@ -34,10 +35,7 @@ export interface OrderGuest {
   email: string
   phone: string
   gender?: string
-  nextOfKin?: {
-    fullName: string
-    email: string
-  }
+  nextOfKin?: { fullName: string; email: string; phone?: string }
 }
 
 export interface OrderData {
@@ -45,8 +43,8 @@ export interface OrderData {
   orderNumber: string
   eventId: string
   guest: OrderGuest
-  status: string           // legacy field
-  paymentStatus: string    // 'success' | 'pending' | 'failed'
+  status: string
+  paymentStatus: string
   totalAmount: number
   mealTotal?: number
   accommodationTotal?: number
@@ -64,49 +62,148 @@ export interface OrderData {
 }
 
 export interface Pagination {
-  page: number
-  pages: number
-  limit: number
-  total: number
+  page: number; pages: number; limit: number; total: number
 }
+
+// ── Ticket list types matching actual API shapes ───────────────────────────────
+
+export interface MealTicketRow {
+  guest: OrderGuest
+  orderNumber: string
+  day: number
+  slot: string
+  code: string          // meal option code
+  optionName: string
+  quantity: number
+  price: number
+  paidAt: string
+  registeredAt: string
+  qrCodes: QRCode[]     // contains QR-XXXXXXXX code and redeemed status
+}
+
+export interface AccommodationTicketRow {
+  orderNumber: string
+  guest: OrderGuest
+  accommodation: {
+    id: string
+    name: string
+    description: string
+    price: number
+    peoplePerRoom: number
+    totalCapacity: number
+    available: boolean
+    amenities: string[]
+    eventId: string
+  }
+  paidAt: string
+  registeredAt: string
+  qrCodes: QRCode[]
+}
+
+export interface TransportTicketRow {
+  orderNumber: string
+  guest: OrderGuest
+  transport: {
+    id: string
+    name: string
+    description: string
+    price: number
+    available: boolean
+    pickupLocation: string
+    eventId: string
+  }
+  paidAt: string
+  registeredAt: string
+  qrCodes: QRCode[]
+}
+
+export interface AttendeeRow {
+  orderNumber: string
+  guest: OrderGuest
+  ticketTypes: string[]
+  mealTotal: number
+  accommodationTotal: number
+  transportTotal: number
+  totalAmount: number
+  paidAt: string
+  registeredAt: string
+}
+
+export interface TicketListPagination {
+  total: number; page: number; limit: number; pages: number
+}
+
+function normalizeOrder(order: Record<string, unknown>): OrderData {
+  return { ...order, _id: (order._id ?? order.id ?? '') as string } as OrderData
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────────
 
 export async function getAllOrders(eventId?: string): Promise<{ orders: OrderData[]; pagination: Pagination }> {
   const params = eventId ? `?eventId=${eventId}` : ''
   const { data } = await api.get(`/orders${params}`)
-  // Response shape: { success, data: { orders: [], pagination: {} } }
   const inner = data?.data ?? data
-  const orders = Array.isArray(inner?.orders) ? inner.orders
-    : Array.isArray(inner) ? inner
-    : []
-  const pagination = inner?.pagination ?? { page: 1, pages: 1, limit: 20, total: orders.length }
-  return { orders, pagination }
+  const rawOrders = Array.isArray(inner?.orders) ? inner.orders : Array.isArray(inner) ? inner : []
+  return {
+    orders: rawOrders.map(normalizeOrder),
+    pagination: inner?.pagination ?? { page: 1, pages: 1, limit: 20, total: rawOrders.length },
+  }
 }
 
 export async function getOrderById(id: string): Promise<OrderData> {
   const { data } = await api.get(`/orders/${id}`)
-  return data?.data?.order ?? data?.order ?? data?.data ?? data
+  return normalizeOrder(data?.data?.order ?? data?.order ?? data?.data ?? data)
 }
 
-// Derive ticket types from order contents
+// ── Ticket list endpoints ─────────────────────────────────────────────────────
+
+export async function getMealTickets(eventId: string): Promise<{ list: MealTicketRow[]; pagination: TicketListPagination }> {
+  const { data } = await api.get(`/orders/${eventId}/meals`)
+  return {
+    list: data?.data?.list ?? [],
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+  }
+}
+
+export async function getAccommodationTickets(eventId: string): Promise<{ list: AccommodationTicketRow[]; pagination: TicketListPagination }> {
+  const { data } = await api.get(`/orders/${eventId}/accommodations`)
+  return {
+    list: data?.data?.list ?? [],
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+  }
+}
+
+export async function getTransportTickets(eventId: string): Promise<{ list: TransportTicketRow[]; pagination: TicketListPagination }> {
+  const { data } = await api.get(`/orders/${eventId}/transports`)
+  return {
+    list: data?.data?.list ?? [],
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+  }
+}
+
+export async function getAttendees(eventId: string): Promise<{ list: AttendeeRow[]; pagination: TicketListPagination }> {
+  const { data } = await api.get(`/orders/${eventId}/attendees`)
+  return {
+    list: data?.data?.list ?? [],
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 export function getTicketTypes(order: OrderData): string[] {
   const types: string[] = []
   if (order.mealSelections && order.mealSelections.length > 0) types.push('Meal')
   if (order.accommodationId) types.push('Accommodation')
-  // Check transportId or transport QR code since wantsTransport is not always returned
   if (order.transportId || order.wantsTransport || order.qrCodes?.some((q) => q.type === 'transport')) types.push('Transport')
   return types.length > 0 ? types : ['General']
 }
 
-// Map API paymentStatus to display status
 export function mapPaymentStatus(order: OrderData): string {
   const raw = order.paymentStatus ?? order.status ?? ''
   const map: Record<string, string> = {
-    success: 'Successful',
-    paid: 'Successful',
-    pending: 'Pending',
-    cancelled: 'Cancelled',
-    canceled: 'Cancelled',
-    failed: 'Failed',
+    success: 'Successful', paid: 'Successful', pending: 'Pending',
+    cancelled: 'Cancelled', canceled: 'Cancelled', failed: 'Failed',
   }
   return map[raw.toLowerCase()] ?? raw
 }

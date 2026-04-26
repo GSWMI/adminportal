@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
-
 const STATUS_STYLES: Record<string, string> = {
   Successful: 'text-green-600 bg-green-50 border-green-200',
   Pending: 'text-blue-600 bg-blue-50 border-blue-200',
@@ -43,9 +42,13 @@ interface TransactionRowProps {
 
 function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProps) {
   const navigate = useNavigate()
-  const menuOpen = openMenuId === order._id
+  // Use orderNumber as the unique menu key since _id may not always be present
+  const menuKey = order.orderNumber
+  const menuOpen = openMenuId === menuKey
   const status = mapPaymentStatus(order)
   const ticketTypes = getTicketTypes(order)
+  // Use _id for navigation if available, otherwise orderNumber
+  const navId = order._id || order.orderNumber
 
   return (
     <tr className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
@@ -79,7 +82,7 @@ function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProp
       </td>
       <td className="px-3 py-3.5 relative">
         <button
-          onClick={() => setOpenMenuId(menuOpen ? null : order._id)}
+          onClick={() => setOpenMenuId(menuOpen ? null : menuKey)}
           className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400"
         >
           <MoreVertical size={15} />
@@ -87,14 +90,14 @@ function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProp
         {menuOpen && (
           <div className="absolute right-4 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[175px]">
             <button
-              onClick={() => { setOpenMenuId(null); navigate(`/transactions/${order._id}`) }}
+              onClick={() => { setOpenMenuId(null); navigate(`/transactions/${navId}`) }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               <FileText size={14} className="text-gray-400 flex-shrink-0" />
               View details
             </button>
             <button
-              onClick={() => { setOpenMenuId(null); navigate(`/transactions/${order._id}`) }}
+              onClick={() => { setOpenMenuId(null); navigate(`/transactions/${navId}`) }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               <ExternalLink size={14} className="text-gray-400 flex-shrink-0" />
@@ -122,11 +125,9 @@ export default function TransactionsPage() {
       try {
         setLoading(true)
         const result = await getAllOrders()
-        // Handle both { orders: [] } and flat array responses
         const orders = Array.isArray(result.orders) ? result.orders : []
         setOrders(orders)
         setTotalPages(result.pagination?.pages ?? 1)
-        console.log('📋 Transactions loaded:', orders.length, 'orders')
       } catch {
         toast.error('Failed to load transactions')
       } finally {
@@ -136,7 +137,6 @@ export default function TransactionsPage() {
     fetchOrders()
   }, [page])
 
-  // Close menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (tableRef.current && !tableRef.current.contains(e.target as Node)) {
@@ -237,7 +237,7 @@ export default function TransactionsPage() {
               ) : (
                 filtered.map((order) => (
                   <TransactionRow
-                    key={order._id}
+                    key={order.orderNumber}
                     order={order}
                     openMenuId={openMenuId}
                     setOpenMenuId={setOpenMenuId}

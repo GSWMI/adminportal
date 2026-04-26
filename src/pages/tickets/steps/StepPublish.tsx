@@ -10,7 +10,7 @@ interface Props {
   onPreview: () => void
 }
 
-const PUBLIC_BASE_URL = 'https://logistics.gswmi.com/attendee-reg'
+const PUBLIC_BASE_URL = 'https://events.gswmi.com'
 
 export default function StepPublish({ onPreview }: Props) {
   const [published, setPublished] = useState(false)
