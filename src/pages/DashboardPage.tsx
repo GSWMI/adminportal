@@ -117,7 +117,7 @@ export default function DashboardPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    {['Attendee', 'Date', 'Ticket type', 'Gateway', 'Amount', 'Status', ''].map((h, i) => (
+                    {['Attendee', 'Date', 'Ticket type',  'Amount', 'Status', ''].map((h, i) => (
                       <th key={i} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                             {ticketTypes.map((t) => <TicketTypeBadge key={t} type={t} />)}
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-[13px] text-gray-600">{order.paystackReference ? 'Paystack' : '—'}</td>
+              
                         <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900 whitespace-nowrap">₦{order.totalAmount?.toLocaleString() ?? '—'}</td>
                         <td className="px-5 py-3.5"><StatusBadge status={mapPaymentStatus(order)} /></td>
                         <td className="px-3 py-3.5 relative">

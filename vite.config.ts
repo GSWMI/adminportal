@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://ticket-booking-dev.onrender.com/api',
+        target: 'https://gswmi-backend.onrender.com/api',
         changeOrigin: true,
         secure: true,
       }

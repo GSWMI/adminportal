@@ -68,9 +68,7 @@ function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProp
           ))}
         </div>
       </td>
-      <td className="px-5 py-3.5 text-[13px] text-gray-600">
-        {order.paystackReference ? 'Paystack' : '—'}
-      </td>
+     
       <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900 whitespace-nowrap">
         ₦{order.totalAmount?.toLocaleString() ?? '—'}
       </td>
@@ -216,7 +214,7 @@ export default function TransactionsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Attendee', 'Date', 'Ticket type', 'Gateway', 'Total amount paid', 'Status', ''].map((h, i) => (
+                {['Attendee', 'Date', 'Ticket type','Total amount paid', 'Status', ''].map((h, i) => (
                   <th key={i} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500 whitespace-nowrap">
                     {h && (
                       <span className="flex items-center gap-1">
