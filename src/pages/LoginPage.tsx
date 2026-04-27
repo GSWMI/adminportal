@@ -141,13 +141,6 @@ export default function LoginPage() {
 
 function GswmiLogo() {
   return (
-    <div className="flex flex-col items-center">
-      <span className="text-white text-2xl font-bold tracking-wide font-serif italic">
-        ╱GSWMI
-      </span>
-      <span className="text-white/60 text-[9px] tracking-widest uppercase">
-        Gbenga Samuel-Wemimo Ministry International
-      </span>
-    </div>
+    <img src="/logo.png" alt="GSWMI" className="h-10 object-contain" />
   )
 }
