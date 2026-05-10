@@ -35,8 +35,7 @@ const Receipt = forwardRef<HTMLDivElement, Props>(({ order }, ref) => {
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <div className="text-[22px] font-bold text-[#0d1b2a] italic">╱GSWMI</div>
-          <div className="text-[9px] text-gray-500 tracking-widest uppercase">Gbenga Samuel-Wemimo Ministry International</div>
+         <img src="/logo.png" alt="GSWMI" className="h-10 object-contain" />
         </div>
         <div className="text-right">
           <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">Payment Receipt</p>

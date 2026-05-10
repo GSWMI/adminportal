@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, SlidersHorizontal, ExternalLink, Calendar, MoreVertical, CreditCard, FileText, Loader2 } from 'lucide-react'
+import { Search, SlidersHorizontal, ExternalLink, Calendar, MoreVertical, FileText, Loader2 } from 'lucide-react'
 import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
+import { getAllEvents, type EventData } from '../services/eventService'
 import { exportOrdersCsv } from '../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -34,20 +35,16 @@ function SortIcon() {
   )
 }
 
-interface TransactionRowProps {
+function TransactionRow({ order, openMenuId, setOpenMenuId }: {
   order: OrderData
   openMenuId: string | null
   setOpenMenuId: (id: string | null) => void
-}
-
-function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProps) {
+}) {
   const navigate = useNavigate()
-  // Use orderNumber as the unique menu key since _id may not always be present
   const menuKey = order.orderNumber
   const menuOpen = openMenuId === menuKey
   const status = mapPaymentStatus(order)
   const ticketTypes = getTicketTypes(order)
-  // Use _id for navigation if available, otherwise orderNumber
   const navId = order._id || order.orderNumber
 
   return (
@@ -56,19 +53,14 @@ function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProp
         <p className="text-[13px] font-medium text-gray-900">{order.guest.firstName} {order.guest.lastName}</p>
         <p className="text-[12px] text-gray-400">{order.guest.email}</p>
       </td>
-      <td className="px-5 py-3.5 text-[13px] text-gray-600 whitespace-nowrap">
-        {formatDate(order.createdAt)}
-      </td>
+      <td className="px-5 py-3.5 text-[13px] text-gray-600 whitespace-nowrap">{formatDate(order.createdAt)}</td>
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-1 flex-wrap">
           {ticketTypes.map((t) => (
-            <span key={t} className="px-2.5 py-0.5 border border-blue-200 rounded-full text-[12px] text-blue-600 bg-blue-50 font-medium whitespace-nowrap">
-              {t}
-            </span>
+            <span key={t} className="px-2.5 py-0.5 border border-blue-200 rounded-full text-[12px] text-blue-600 bg-blue-50 font-medium whitespace-nowrap">{t}</span>
           ))}
         </div>
       </td>
-     
       <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900 whitespace-nowrap">
         ₦{order.totalAmount?.toLocaleString() ?? '—'}
       </td>
@@ -79,27 +71,16 @@ function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProp
         </span>
       </td>
       <td className="px-3 py-3.5 relative">
-        <button
-          onClick={() => setOpenMenuId(menuOpen ? null : menuKey)}
-          className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400"
-        >
+        <button onClick={() => setOpenMenuId(menuOpen ? null : menuKey)}
+          className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400">
           <MoreVertical size={15} />
         </button>
         {menuOpen && (
           <div className="absolute right-4 bottom-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 min-w-[175px]">
-            <button
-              onClick={() => { setOpenMenuId(null); navigate(`/transactions/${navId}`) }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
-            >
+            <button onClick={() => { setOpenMenuId(null); navigate(`/transactions/${navId}`) }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
               <FileText size={14} className="text-gray-400 flex-shrink-0" />
               View details
-            </button>
-            <button
-              onClick={() => { setOpenMenuId(null); navigate(`/transactions/${navId}`) }}
-              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
-            >
-              <ExternalLink size={14} className="text-gray-400 flex-shrink-0" />
-              Download receipt
             </button>
           </div>
         )}
@@ -108,24 +89,46 @@ function TransactionRow({ order, openMenuId, setOpenMenuId }: TransactionRowProp
   )
 }
 
+const ITEMS_PER_PAGE = 20
+
 export default function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
-  const [orders, setOrders] = useState<OrderData[]>([])
   const [totalPages, setTotalPages] = useState(1)
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [orders, setOrders] = useState<OrderData[]>([])
   const [loading, setLoading] = useState(true)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+
+  // Event filter
+  const [events, setEvents] = useState<EventData[]>([])
+  const [selectedEventId, setSelectedEventId] = useState<string>('')
+  const [eventsLoading, setEventsLoading] = useState(true)
+
   const tableRef = useRef<HTMLDivElement>(null)
 
+  // Load events for the filter dropdown
+  useEffect(() => {
+    getAllEvents()
+      .then(setEvents)
+      .catch(() => toast.error('Failed to load events'))
+      .finally(() => setEventsLoading(false))
+  }, [])
+
+  // Fetch orders whenever page or event filter changes
   useEffect(() => {
     async function fetchOrders() {
       try {
         setLoading(true)
-        const result = await getAllOrders()
-        const orders = Array.isArray(result.orders) ? result.orders : []
-        setOrders(orders)
-        setTotalPages(result.pagination?.pages ?? 1)
+        const result = await getAllOrders({
+          eventId: selectedEventId || undefined,
+          page,
+          limit: ITEMS_PER_PAGE,
+        })
+        setOrders(result.orders)
+        setTotalPages(result.pagination.pages ?? 1)
+        setTotalOrders(result.pagination.total ?? 0)
       } catch {
         toast.error('Failed to load transactions')
       } finally {
@@ -133,18 +136,42 @@ export default function TransactionsPage() {
       }
     }
     fetchOrders()
-  }, [page])
+  }, [page, selectedEventId])
 
+  // Close menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (tableRef.current && !tableRef.current.contains(e.target as Node)) {
-        setOpenMenuId(null)
-      }
+      if (tableRef.current && !tableRef.current.contains(e.target as Node)) setOpenMenuId(null)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const handleEventChange = (eventId: string) => {
+    setSelectedEventId(eventId)
+    setPage(1) // reset to first page on filter change
+  }
+
+  const handleExport = async () => {
+    // Export requires an eventId — prompt if none selected
+    if (!selectedEventId) {
+      toast.error('Please select an event before exporting.')
+      return
+    }
+    setExporting(true)
+    try {
+      await exportOrdersCsv({ eventId: selectedEventId })
+      toast.success('Orders exported successfully')
+    } catch {
+      toast.error('Export failed')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const selectedEvent = events.find((e) => e._id === selectedEventId)
+
+  // Client-side search filter on the current page's data
   const filtered = orders.filter((o) =>
     !search ||
     `${o.guest.firstName} ${o.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -152,84 +179,104 @@ export default function TransactionsPage() {
     o.orderNumber?.toLowerCase().includes(search.toLowerCase())
   )
 
-  const hasOrders = orders.length > 0
-
   return (
     <div className="max-w-[1100px]">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-[22px] font-semibold text-gray-900">Transactions</h1>
-        {hasOrders && (
-          <button
-            onClick={async () => {
-              setExporting(true)
-              try {
-                await exportOrdersCsv()
-                toast.success('Orders exported successfully')
-              } catch {
-                toast.error('Failed to export orders')
-              } finally {
-                setExporting(false)
-              }
-            }}
-            disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors whitespace-nowrap disabled:opacity-60"
-          >
-            {exporting ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
-            {exporting ? 'Exporting...' : 'Export'}
-          </button>
-        )}
+        <div>
+          <h1 className="text-[22px] font-semibold text-gray-900">Transactions</h1>
+          {selectedEvent && (
+            <p className="text-[13px] text-gray-400 mt-0.5">{selectedEvent.name}</p>
+          )}
+        </div>
+        <button
+          onClick={handleExport}
+          disabled={exporting || !selectedEventId}
+          title={!selectedEventId ? 'Select an event to export' : 'Export orders as CSV'}
+          className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {exporting ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+          {exporting ? 'Exporting...' : 'Export'}
+        </button>
       </div>
 
-      {loading ? (
+      {loading && !orders.length ? (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <Skeleton count={7} height={52} className="mb-2" />
         </div>
-      ) : !hasOrders ? (
-        <EmptyState />
       ) : (
         <div ref={tableRef} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {/* Toolbar */}
-          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100">
-            <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap">
-              <Calendar size={13} className="text-gray-400" />
-              All dates
-            </button>
+          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 flex-wrap">
+
+            {/* Event filter — primary control */}
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="text-gray-400 flex-shrink-0" />
+              <select
+                value={selectedEventId}
+                onChange={(e) => handleEventChange(e.target.value)}
+                disabled={eventsLoading}
+                className="pl-2 pr-8 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-700 outline-none focus:border-[#3b5bdb] bg-white transition-colors min-w-[200px]"
+              >
+                <option value="">All events</option>
+                {events.map((e) => (
+                  <option key={e._id} value={e._id}>{e.name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex-1" />
+
+            {/* Search */}
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-                placeholder="Search"
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, email, order #"
                 className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] w-56 transition-all"
               />
             </div>
+
             <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors">
               <SlidersHorizontal size={14} />
               Filters
             </button>
           </div>
 
+          {/* Total count */}
+          {totalOrders > 0 && (
+            <div className="px-5 py-2 border-b border-gray-50 bg-gray-50/50">
+              <span className="text-[12px] text-gray-400">
+                {totalOrders} total order{totalOrders !== 1 ? 's' : ''}
+                {selectedEvent ? ` for ${selectedEvent.name}` : ''}
+              </span>
+            </div>
+          )}
+
           {/* Table */}
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Attendee', 'Date', 'Ticket type','Total amount paid', 'Status', ''].map((h, i) => (
+                {['Attendee', 'Date', 'Ticket type', 'Total amount paid', 'Status', ''].map((h, i) => (
                   <th key={i} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500 whitespace-nowrap">
-                    {h && (
-                      <span className="flex items-center gap-1">
-                        {h}{h !== '' && <SortIcon />}
-                      </span>
-                    )}
+                    {h && <span className="flex items-center gap-1">{h}{h !== '' && <SortIcon />}</span>}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <td key={j} className="px-5 py-3.5"><Skeleton height={14} /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-[13px] text-gray-400">
-                    No transactions match your search
+                  <td colSpan={6} className="text-center py-12 text-[13px] text-gray-400">
+                    {search ? 'No transactions match your search' : 'No transactions found'}
                   </td>
                 </tr>
               ) : (
@@ -247,13 +294,34 @@ export default function TransactionsPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-            <span className="text-[12px] text-gray-500">Page {page} of {totalPages}</span>
+            <span className="text-[12px] text-gray-500">
+              Page {page} of {totalPages}
+              {totalOrders > 0 && ` · ${totalOrders} total`}
+            </span>
             <div className="flex items-center gap-2">
-              <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
+              <button disabled={page === 1 || loading} onClick={() => setPage((p) => p - 1)}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
                 Previous
               </button>
-              <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}
+              {/* Page number buttons — show up to 5 around current page */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const start = Math.max(1, Math.min(page - 2, totalPages - 4))
+                return start + i
+              }).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  disabled={loading}
+                  className={`w-8 h-8 rounded-lg text-[12px] transition-colors ${
+                    p === page
+                      ? 'bg-[#3b5bdb] text-white'
+                      : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button disabled={page === totalPages || loading} onClick={() => setPage((p) => p + 1)}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
                 Next
               </button>
@@ -261,17 +329,6 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 gap-4">
-      <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center">
-        <CreditCard size={40} className="text-gray-300" strokeWidth={1.5} />
-      </div>
-      <p className="text-[14px] text-gray-500">No transaction records yet</p>
     </div>
   )
 }

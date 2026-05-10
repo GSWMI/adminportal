@@ -348,8 +348,7 @@ export default function TicketPreviewPage() {
       {/* GSWMI Header */}
       <header className="bg-[#1a2e5a] px-8 py-4 flex items-center justify-between">
         <div>
-          <div className="text-white text-xl font-bold italic">╱GSWMI</div>
-          <div className="text-white/40 text-[9px] tracking-widest uppercase">Gbenga Samuel-Wemimo Ministry International</div>
+          <img src="/logo.png" alt="GSWMI" className="h-10 object-contain" />
         </div>
         <button className="text-[13px] underline text-white hover:text-blue-200 transition-colors">Contact support</button>
       </header>

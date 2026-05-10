@@ -24,12 +24,7 @@ export default function Sidebar() {
     <aside className="w-68 h-screen sticky top-0 bg-[#0d1b2a] flex flex-col shrink-0 overflow-hidden">
       {/* Logo */}
       <div className="px-5 pt-6 pb-4 shrink-0">
-        <div className="flex flex-col">
-          <span className="text-white text-xl font-bold tracking-wide font-serif italic">╱GSWMI</span>
-          <span className="text-white/40 text-[8px] tracking-widest uppercase leading-tight">
-            Gbenga Samuel-Wemimo Ministry International
-          </span>
-        </div>
+        <img src="/logo.png" alt="GSWMI" className="h-10 object-contain" />
       </div>
 
       {/* Search */}

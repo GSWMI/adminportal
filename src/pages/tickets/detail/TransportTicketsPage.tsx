@@ -7,6 +7,8 @@ import { exportTransportTicketsCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
+import { usePagination } from '../../../hooks/usePagination'
+import PaginationBar from '../../../components/ui/PaginationBar'
 
 export default function TransportTicketsPage() {
   const { id } = useParams()
@@ -34,6 +36,14 @@ export default function TransportTicketsPage() {
     fetchData()
   }, [id])
 
+  const filtered = list.filter((r) =>
+    !search ||
+    `${r.guest.firstName} ${r.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+    r.orderNumber.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const { page, setPage, totalPages, total, paged } = usePagination(filtered, 20)
+
   const handleExport = async () => {
     setExporting(true)
     try { await exportTransportTicketsCsv(id); toast.success('Transport tickets exported') }
@@ -51,12 +61,6 @@ export default function TransportTicketsPage() {
     } catch { toast.error('Failed to update registration') }
     finally { setClosingReg(false) }
   }
-
-  const filtered = list.filter((r) =>
-    !search ||
-    `${r.guest.firstName} ${r.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-    r.orderNumber.toLowerCase().includes(search.toLowerCase())
-  )
 
   return (
     <div className="max-w-[1100px]">
@@ -83,7 +87,7 @@ export default function TransportTicketsPage() {
 
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)}
+        <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           placeholder="Search by name or order number..."
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#3b5bdb]" />
       </div>
@@ -104,7 +108,7 @@ export default function TransportTicketsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row, i) => {
+                {paged.map((row, i) => {
                   const qr = row.qrCodes?.[0]
                   return (
                     <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
@@ -134,6 +138,7 @@ export default function TransportTicketsPage() {
                 })}
               </tbody>
             </table>
+            <PaginationBar page={page} totalPages={totalPages} total={total} label="transport tickets" onPage={setPage} />
           </div>
         )}
     </div>

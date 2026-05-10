@@ -88,10 +88,7 @@ export default function PublicEventPage() {
     <div className="min-h-screen bg-[#faf9f6]">
       {/* Public header */}
       <header className="bg-[#0d1b2a] px-8 py-4 flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-white text-lg font-bold font-serif italic">╱GSWMI</span>
-          <span className="text-white/40 text-[8px] tracking-widest uppercase">Gbenga Samuel-Wemimo Ministry International</span>
-        </div>
+       <img src="/logo.png" alt="GSWMI" className="h-10 object-contain" />
         <a href="#" className="text-white/80 text-[13px] underline hover:text-white">Contact support</a>
       </header>
 

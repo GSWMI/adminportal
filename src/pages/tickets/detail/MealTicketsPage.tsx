@@ -7,6 +7,8 @@ import { exportMealTicketsCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
+import { usePagination } from '../../../hooks/usePagination'
+import PaginationBar from '../../../components/ui/PaginationBar'
 
 const SLOT_COLORS: Record<string, string> = {
   breakfast: 'bg-yellow-50 text-yellow-600 border-yellow-200',
@@ -69,6 +71,7 @@ export default function MealTicketsPage() {
       r.orderNumber.toLowerCase().includes(search.toLowerCase())
     )
 
+  const { page, setPage, totalPages, total, paged } = usePagination(filtered, 20)
   const days = Array.from({ length: totalDays }, (_, i) => i + 1)
 
   return (
@@ -97,7 +100,7 @@ export default function MealTicketsPage() {
 
       <div className="flex items-center gap-2 mb-6 flex-wrap">
         {days.map((day) => (
-          <button key={day} onClick={() => setActiveDay(day)}
+          <button key={day} onClick={() => { setActiveDay(day); setPage(1) }}
             className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${activeDay === day ? 'bg-[#3b5bdb] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}>
             Day {day}
           </button>
@@ -106,7 +109,7 @@ export default function MealTicketsPage() {
 
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)}
+        <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           placeholder="Search by name or order number..."
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#3b5bdb]" />
       </div>
@@ -127,7 +130,7 @@ export default function MealTicketsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row, i) => {
+                {paged.map((row, i) => {
                   const qr = row.qrCodes?.[0]
                   return (
                     <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
@@ -157,6 +160,7 @@ export default function MealTicketsPage() {
                 })}
               </tbody>
             </table>
+            <PaginationBar page={page} totalPages={totalPages} total={total} label="meal tickets" onPage={setPage} />
           </div>
         )}
     </div>

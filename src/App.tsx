@@ -16,6 +16,7 @@ import TransportTicketsPage from './pages/tickets/detail/TransportTicketsPage'
 import TransactionsPage from './pages/TransactionsPage'
 import TransactionDetailPage from './pages/transactions/TransactionDetailPage'
 import UsersPage from './pages/UsersPage'
+import AttendeeDetailPage from './pages/tickets/detail/AttendeeDetailPage'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="tickets/new" element={<NewTicketPage />} />
             <Route path="tickets/:id" element={<TicketDetailPage />} />
             <Route path="tickets/:id/attendees" element={<AttendeesPage />} />
+            <Route path="/tickets/:id/attendees/:orderNumber" element={<AttendeeDetailPage />} />
             <Route path="tickets/:id/meal-tickets" element={<MealTicketsPage />} />
             <Route path="tickets/:id/accommodation-tickets" element={<AccommodationTicketsPage />} />
             <Route path="tickets/:id/transport-tickets" element={<TransportTicketsPage />} />
