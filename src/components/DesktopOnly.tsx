@@ -19,12 +19,7 @@ export default function DesktopOnly({ children }: { children: React.ReactNode })
       <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
         <Monitor size={32} className="text-white" strokeWidth={1.5} />
       </div>
-      <div className="flex flex-col items-center">
-        <span className="text-white text-xl font-bold font-serif italic mb-1">╱GSWMI</span>
-        <span className="text-white/40 text-[9px] tracking-widest uppercase mb-8">
-          Gbenga Samuel-Wemimo Ministry International
-        </span>
-      </div>
+      <img src="/logo.png" alt="GSWMI" className="h-10 object-contain" />
       <h1 className="text-white text-[20px] font-semibold mb-3">Desktop only</h1>
       <p className="text-white/60 text-[14px] leading-relaxed max-w-70">
         This admin dashboard is only available on desktop screens. Please open it on a laptop or larger display.

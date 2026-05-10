@@ -65,35 +65,27 @@ export interface Pagination {
   page: number; pages: number; limit: number; total: number
 }
 
-// ── Ticket list types matching actual API shapes ───────────────────────────────
-
 export interface MealTicketRow {
   guest: OrderGuest
   orderNumber: string
   day: number
   slot: string
-  code: string          // meal option code
+  code: string
   optionName: string
   quantity: number
   price: number
   paidAt: string
   registeredAt: string
-  qrCodes: QRCode[]     // contains QR-XXXXXXXX code and redeemed status
+  qrCodes: QRCode[]
 }
 
 export interface AccommodationTicketRow {
   orderNumber: string
   guest: OrderGuest
   accommodation: {
-    id: string
-    name: string
-    description: string
-    price: number
-    peoplePerRoom: number
-    totalCapacity: number
-    available: boolean
-    amenities: string[]
-    eventId: string
+    id: string; name: string; description: string; price: number
+    peoplePerRoom: number; totalCapacity: number; available: boolean
+    amenities: string[]; eventId: string
   }
   paidAt: string
   registeredAt: string
@@ -104,13 +96,8 @@ export interface TransportTicketRow {
   orderNumber: string
   guest: OrderGuest
   transport: {
-    id: string
-    name: string
-    description: string
-    price: number
-    available: boolean
-    pickupLocation: string
-    eventId: string
+    id: string; name: string; description: string; price: number
+    available: boolean; pickupLocation: string; eventId: string
   }
   paidAt: string
   registeredAt: string
@@ -139,14 +126,17 @@ function normalizeOrder(order: Record<string, unknown>): OrderData {
 
 // ── Orders ────────────────────────────────────────────────────────────────────
 
+// Use limit=1000 to fetch all records — backend default is 40 which causes truncation.
+// Increase this value if order count ever exceeds 1000.
 export async function getAllOrders(eventId?: string): Promise<{ orders: OrderData[]; pagination: Pagination }> {
-  const params = eventId ? `?eventId=${eventId}` : ''
-  const { data } = await api.get(`/orders${params}`)
+  const params = new URLSearchParams({ limit: '1000' })
+  if (eventId) params.set('eventId', eventId)
+  const { data } = await api.get(`/orders?${params.toString()}`)
   const inner = data?.data ?? data
   const rawOrders = Array.isArray(inner?.orders) ? inner.orders : Array.isArray(inner) ? inner : []
   return {
     orders: rawOrders.map(normalizeOrder),
-    pagination: inner?.pagination ?? { page: 1, pages: 1, limit: 20, total: rawOrders.length },
+    pagination: inner?.pagination ?? { page: 1, pages: 1, limit: 1000, total: rawOrders.length },
   }
 }
 
@@ -155,37 +145,37 @@ export async function getOrderById(id: string): Promise<OrderData> {
   return normalizeOrder(data?.data?.order ?? data?.order ?? data?.data ?? data)
 }
 
-// ── Ticket list endpoints ─────────────────────────────────────────────────────
+// ── Ticket list endpoints — high limit to avoid pagination cutoff ───────────
 
 export async function getMealTickets(eventId: string): Promise<{ list: MealTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/meals`)
+  const { data } = await api.get(`/orders/${eventId}/meals?limit=1000`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
   }
 }
 
 export async function getAccommodationTickets(eventId: string): Promise<{ list: AccommodationTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/accommodations`)
+  const { data } = await api.get(`/orders/${eventId}/accommodations?limit=1000`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
   }
 }
 
 export async function getTransportTickets(eventId: string): Promise<{ list: TransportTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/transports`)
+  const { data } = await api.get(`/orders/${eventId}/transports?limit=1000`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
   }
 }
 
 export async function getAttendees(eventId: string): Promise<{ list: AttendeeRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/attendees`)
+  const { data } = await api.get(`/orders/${eventId}/attendees?limit=1000`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
   }
 }
 

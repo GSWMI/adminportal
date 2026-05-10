@@ -63,11 +63,11 @@ export interface EventData {
   updatedAt: string
 }
 
-// ── Events ────────────────────────────────────────────────────────────────────
-
 function normalizeEvent(raw: Record<string, unknown>): EventData {
   return { ...raw, _id: (raw._id ?? raw.id ?? '') as string } as EventData
 }
+
+// ── Events ────────────────────────────────────────────────────────────────────
 
 export async function getAllEvents(): Promise<EventData[]> {
   const { data } = await api.get('/events/')
@@ -184,35 +184,37 @@ export async function getDashboardStats(eventId?: string): Promise<Record<string
 }
 
 // ── Activity Log ──────────────────────────────────────────────────────────────
+// entity is now REQUIRED per Postman v8.
+// We fetch logs for each entity type and merge them so we get the full picture.
 
-// Actual API shape (confirmed from network tab):
-// {
-//   "id": "69ee5f5e...",
-//   "action": "create",
-//   "entity": "order" | "event" | ...,
-//   "entityId": "...",
-//   "userId": "..." (optional — absent on guest-created orders),
-//   "details": {
-//     "orderNumber": "ORD-...",  (for orders)
-//     "guest": "email@...",       (for orders)
-//     "name": "Event Name"        (for events)
-//   },
-//   "createdAt": "...",
-//   "updatedAt": "..."
-// }
 export interface ActivityLogItem {
-  id: string        // backend returns "id" not "_id"
+  id: string
   action: string
   entity: string
   entityId?: string
-  userId?: string   // admin user ID — absent for guest actions
+  userId?: string
   details?: {
     orderNumber?: string
-    guest?: string  // guest email for order logs
-    name?: string   // event name for event logs
+    guest?: string
+    name?: string
   }
   createdAt: string
   updatedAt?: string
+}
+
+async function fetchLogsByEntity(
+  entity: string,
+  params: { action?: string; page?: number; limit?: number }
+): Promise<{ logs: ActivityLogItem[]; pagination: { page: number; pages: number; total: number } }> {
+  const query = new URLSearchParams({ entity })
+  if (params.action) query.set('action', params.action)
+  if (params.page) query.set('page', String(params.page))
+  if (params.limit) query.set('limit', String(params.limit))
+  const { data } = await api.get(`/events/admin/activity?${query.toString()}`)
+  return {
+    logs: data?.data?.logs ?? data?.data ?? data?.logs ?? [],
+    pagination: data?.data?.pagination ?? data?.pagination ?? { page: 1, pages: 1, total: 0 },
+  }
 }
 
 export async function getActivityLog(params?: {
@@ -221,14 +223,37 @@ export async function getActivityLog(params?: {
   page?: number
   limit?: number
 }): Promise<{ logs: ActivityLogItem[]; pagination: { page: number; pages: number; total: number } }> {
-  const query = new URLSearchParams()
-  if (params?.entity) query.set('entity', params.entity)
-  if (params?.action) query.set('action', params.action)
-  if (params?.page) query.set('page', String(params.page))
-  if (params?.limit) query.set('limit', String(params.limit))
-  const { data } = await api.get(`/events/admin/activity?${query.toString()}`)
+  const limit = params?.limit ?? 10
+
+  // If a specific entity is requested, fetch just that one
+  if (params?.entity) {
+    return fetchLogsByEntity(params.entity, { action: params.action, page: params.page, limit })
+  }
+
+  // Otherwise fetch all entity types and merge, sorted by newest first
+  const entities = ['event', 'order', 'user']
+  const results = await Promise.allSettled(
+    entities.map((e) => fetchLogsByEntity(e, { limit: 50 }))
+  )
+
+  const allLogs: ActivityLogItem[] = []
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      allLogs.push(...result.value.logs)
+    }
+  }
+
+  // Sort by createdAt descending
+  allLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+  // Apply pagination manually
+  const page = params?.page ?? 1
+  const start = (page - 1) * limit
+  const paged = allLogs.slice(start, start + limit)
+  const totalPages = Math.ceil(allLogs.length / limit)
+
   return {
-    logs: data?.data?.logs ?? data?.data ?? data?.logs ?? [],
-    pagination: data?.data?.pagination ?? data?.pagination ?? { page: 1, pages: 1, total: 0 },
+    logs: paged,
+    pagination: { page, pages: totalPages, total: allLogs.length },
   }
 }

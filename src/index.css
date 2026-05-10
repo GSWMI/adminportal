@@ -22,3 +22,79 @@ body,
 body {
   font-family: "Plus Jakarta Sans", sans-serif;
 }
+/* Add these styles to your existing index.css or global stylesheet */
+/* They style the output of the rich text editor (TipTap/Quill) in display contexts */
+
+.rich-text-display p {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #374151;
+}
+
+.rich-text-display p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-display strong,
+.rich-text-display b {
+  font-weight: 600;
+  color: #111827;
+}
+
+.rich-text-display em,
+.rich-text-display i {
+  font-style: italic;
+}
+
+.rich-text-display u {
+  text-decoration: underline;
+}
+
+.rich-text-display h1,
+.rich-text-display h2,
+.rich-text-display h3 {
+  font-weight: 700;
+  color: #0d1b2a;
+  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+}
+
+.rich-text-display h1 { font-size: 20px; }
+.rich-text-display h2 { font-size: 18px; }
+.rich-text-display h3 { font-size: 16px; }
+
+.rich-text-display ul,
+.rich-text-display ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.rich-text-display ul { list-style-type: disc; }
+.rich-text-display ol { list-style-type: decimal; }
+
+.rich-text-display li {
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 0.25rem;
+  line-height: 1.5;
+}
+
+.rich-text-display br {
+  display: block;
+  content: '';
+  margin-top: 0.25rem;
+}
+
+.rich-text-display a {
+  color: #3b5bdb;
+  text-decoration: underline;
+}
+
+.rich-text-display blockquote {
+  border-left: 3px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #6b7280;
+  font-style: italic;
+  margin: 0.75rem 0;
+}
