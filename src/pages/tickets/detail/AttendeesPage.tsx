@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, ExternalLink, XCircle, CheckCircle, Loader2 } from 'lucide-react'
-import { getAttendees, resendTicket, type AttendeeRow } from '../../../services/orderService'
+import { getAttendees, type AttendeeRow } from '../../../services/orderService'
 import { getEventById, updateRegistration } from '../../../services/eventService'
 import { exportAttendeesCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
@@ -29,7 +29,6 @@ export default function AttendeesPage() {
   const [eventName, setEventName] = useState('')
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  const [resendingId, setResendingId] = useState<string | null>(null)
   const [closingReg, setClosingReg] = useState(false)
   const [regOpen, setRegOpen] = useState(true)
 
@@ -59,13 +58,6 @@ export default function AttendeesPage() {
   })
 
   const { page, setPage, totalPages, total, paged } = usePagination(filtered, 20)
-
-  const handleResend = async (orderNumber: string, email: string) => {
-    setResendingId(orderNumber)
-    try { await resendTicket(orderNumber); toast.success(`Ticket resent to ${email}`) }
-    catch { toast.error('Failed to resend ticket') }
-    finally { setResendingId(null) }
-  }
 
   const handleToggleRegistration = async () => {
     if (!id) return
@@ -115,11 +107,11 @@ export default function AttendeesPage() {
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search by name, email or order number..."
+              placeholder="Search name, email or order #"
               className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] w-52 transition-all" />
           </div>
           <select value={ticketFilter} onChange={(e) => { setTicketFilter(e.target.value); setPage(1) }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:border-[#3b5bdb] bg-white">
+            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 outline-none focus:border-[#3b5bdb] bg-white">
             <option value="all">All ticket types</option>
             <option value="meal">Meal only</option>
             <option value="accommodation">Accommodation only</option>
@@ -127,10 +119,17 @@ export default function AttendeesPage() {
           </select>
         </div>
 
+        {/* Total count */}
+        {total > 0 && (
+          <div className="px-5 py-2 border-b border-gray-50 bg-gray-50/50">
+            <span className="text-[12px] text-gray-400">{total} attendee{total !== 1 ? 's' : ''}</span>
+          </div>
+        )}
+
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100">
-              {['Name', 'Email', 'Phone', 'Gender', 'Next of kin', 'Tickets', 'Total (₦)', 'Action'].map((h) => (
+              {['Name', 'Phone', 'Gender', 'Next of kin', 'Tickets', 'Total (₦)'].map((h) => (
                 <th key={h} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500 whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -138,21 +137,27 @@ export default function AttendeesPage() {
           <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 8 }).map((_, j) => (
+                <tr key={i}>{Array.from({ length: 6 }).map((_, j) => (
                   <td key={j} className="px-5 py-3.5"><Skeleton height={14} /></td>
                 ))}</tr>
               ))
             ) : paged.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-5 py-12 text-center text-[13px] text-gray-400">
+                <td colSpan={6} className="px-5 py-12 text-center text-[13px] text-gray-400">
                   {search ? 'No attendees match your search' : 'No attendees for this event yet'}
                 </td>
               </tr>
             ) : (
               paged.map((row, i) => (
-                <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">{row.guest.firstName} {row.guest.lastName}</td>
-                  <td className="px-5 py-3.5 text-[13px] text-gray-600">{row.guest.email}</td>
+                <tr
+                  key={i}
+                  onClick={() => navigate(`/tickets/${id}/attendees/${row.orderNumber}`)}
+                  className="border-b border-gray-50 last:border-0 hover:bg-blue-50/40 transition-colors cursor-pointer"
+                >
+                  <td className="px-5 py-3.5">
+                    <p className="text-[13px] font-medium text-gray-900">{row.guest.firstName} {row.guest.lastName}</p>
+                    <p className="text-[11px] text-gray-400">{row.guest.email}</p>
+                  </td>
                   <td className="px-5 py-3.5 text-[13px] text-gray-600">{row.guest.phone}</td>
                   <td className="px-5 py-3.5 text-[13px] text-gray-600 capitalize">{row.guest.gender ?? '—'}</td>
                   <td className="px-5 py-3.5">
@@ -172,14 +177,8 @@ export default function AttendeesPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">₦{row.totalAmount.toLocaleString()}</td>
-                  <td className="px-5 py-3.5">
-                    <button onClick={() => handleResend(row.orderNumber, row.guest.email)}
-                      disabled={resendingId === row.orderNumber}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[#3b5bdb] text-[#3b5bdb] rounded-lg text-[12px] font-medium hover:bg-blue-50 transition-colors disabled:opacity-60">
-                      {resendingId === row.orderNumber && <Loader2 size={12} className="animate-spin" />}
-                      {resendingId === row.orderNumber ? 'Sending...' : 'Resend ticket(s)'}
-                    </button>
+                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">
+                    ₦{row.totalAmount.toLocaleString()}
                   </td>
                 </tr>
               ))
@@ -189,6 +188,11 @@ export default function AttendeesPage() {
 
         <PaginationBar page={page} totalPages={totalPages} total={total} label="attendees" onPage={setPage} />
       </div>
+
+      {/* Click hint */}
+      {!loading && paged.length > 0 && (
+        <p className="text-[12px] text-gray-400 text-center mt-3">Click any row to view full attendee details</p>
+      )}
     </div>
   )
 }
