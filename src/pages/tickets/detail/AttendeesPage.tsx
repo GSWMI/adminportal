@@ -7,6 +7,8 @@ import { exportAttendeesCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
+import { usePagination } from '../../../hooks/usePagination'
+import PaginationBar from '../../../components/ui/PaginationBar'
 
 const TICKET_TYPE_COLORS: Record<string, string> = {
   meal: 'bg-blue-50 text-blue-600 border-blue-200',
@@ -23,7 +25,6 @@ export default function AttendeesPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [ticketFilter, setTicketFilter] = useState<string>('all')
-  const [page, setPage] = useState(1)
   const [list, setList] = useState<AttendeeRow[]>([])
   const [eventName, setEventName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -31,54 +32,21 @@ export default function AttendeesPage() {
   const [resendingId, setResendingId] = useState<string | null>(null)
   const [closingReg, setClosingReg] = useState(false)
   const [regOpen, setRegOpen] = useState(true)
-  const ITEMS_PER_PAGE = 10
 
   useEffect(() => {
     if (!id) return
     async function fetchData() {
       setLoading(true)
       try {
-        const [result, event] = await Promise.all([
-          getAttendees(id!),
-          getEventById(id!),
-        ])
+        const [result, event] = await Promise.all([getAttendees(id!), getEventById(id!)])
         setList(result.list)
         setEventName(event.name)
         setRegOpen(event.registrationOpen ?? true)
-      } catch {
-        toast.error('Failed to load attendees')
-      } finally {
-        setLoading(false)
-      }
+      } catch { toast.error('Failed to load attendees') }
+      finally { setLoading(false) }
     }
     fetchData()
   }, [id])
-
-  const handleResend = async (orderNumber: string, email: string) => {
-    setResendingId(orderNumber)
-    try {
-      await resendTicket(orderNumber)
-      toast.success(`Ticket resent to ${email}`)
-    } catch {
-      toast.error('Failed to resend ticket')
-    } finally {
-      setResendingId(null)
-    }
-  }
-
-  const handleToggleRegistration = async () => {
-    if (!id) return
-    setClosingReg(true)
-    try {
-      await updateRegistration(id, 'all', !regOpen)
-      setRegOpen((v) => !v)
-      toast.success(regOpen ? 'Registration closed' : 'Registration opened')
-    } catch {
-      toast.error('Failed to update registration')
-    } finally {
-      setClosingReg(false)
-    }
-  }
 
   const filtered = list.filter((r) => {
     const matchSearch = !search ||
@@ -90,47 +58,51 @@ export default function AttendeesPage() {
     return r.ticketTypes.map((t) => t.toLowerCase()).includes(ticketFilter)
   })
 
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
-  const TOTAL_PAGES = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const { page, setPage, totalPages, total, paged } = usePagination(filtered, 20)
+
+  const handleResend = async (orderNumber: string, email: string) => {
+    setResendingId(orderNumber)
+    try { await resendTicket(orderNumber); toast.success(`Ticket resent to ${email}`) }
+    catch { toast.error('Failed to resend ticket') }
+    finally { setResendingId(null) }
+  }
+
+  const handleToggleRegistration = async () => {
+    if (!id) return
+    setClosingReg(true)
+    try {
+      await updateRegistration(id, 'all', !regOpen)
+      setRegOpen((v) => !v)
+      toast.success(regOpen ? 'Registration closed' : 'Registration opened')
+    } catch { toast.error('Failed to update registration') }
+    finally { setClosingReg(false) }
+  }
 
   return (
-    <div className="max-w-[1400px]">
+    <div className="max-w-[1100px]">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/tickets')} className="text-gray-400 hover:text-gray-600 transition-colors">
             <ArrowLeft size={18} />
           </button>
           <h1 className="text-[18px] font-semibold text-gray-900">Attendees</h1>
-          {eventName && (
-            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-medium">{eventName}</span>
-          )}
+          {eventName && <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-medium">{eventName}</span>}
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={async () => {
-              setExporting(true)
-              try {
-                await exportAttendeesCsv(id)
-                toast.success('Attendees exported!')
-              } catch {
-                toast.error('Failed to export attendees')
-              } finally {
-                setExporting(false)
-              }
-            }}
-            disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
-          >
+          <button onClick={async () => {
+            setExporting(true)
+            try { await exportAttendeesCsv(id); toast.success('Attendees exported!') }
+            catch { toast.error('Failed to export attendees') }
+            finally { setExporting(false) }
+          }} disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60">
             {exporting ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
             {exporting ? 'Exporting...' : 'Export'}
           </button>
-          <button
-            onClick={handleToggleRegistration}
-            disabled={closingReg}
+          <button onClick={handleToggleRegistration} disabled={closingReg}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-colors disabled:opacity-60 ${
               regOpen ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-green-500 text-white hover:bg-green-600'
-            }`}
-          >
+            }`}>
             {closingReg ? <Loader2 size={14} className="animate-spin" /> : regOpen ? <XCircle size={14} /> : <CheckCircle size={14} />}
             {closingReg ? 'Updating...' : regOpen ? 'Close registration' : 'Open registration'}
           </button>
@@ -138,22 +110,16 @@ export default function AttendeesPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 flex-wrap">
           <div className="flex-1" />
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search by name, email or order number..."
-              className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] w-52 transition-all"
-            />
+              className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] w-52 transition-all" />
           </div>
-          <select
-            value={ticketFilter}
-            onChange={(e) => { setTicketFilter(e.target.value); setPage(1) }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:border-[#3b5bdb] bg-white"
-          >
+          <select value={ticketFilter} onChange={(e) => { setTicketFilter(e.target.value); setPage(1) }}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:border-[#3b5bdb] bg-white">
             <option value="all">All ticket types</option>
             <option value="meal">Meal only</option>
             <option value="accommodation">Accommodation only</option>
@@ -172,24 +138,20 @@ export default function AttendeesPage() {
           <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
-                    <td key={j} className="px-5 py-3.5"><Skeleton height={14} /></td>
-                  ))}
-                </tr>
+                <tr key={i}>{Array.from({ length: 8 }).map((_, j) => (
+                  <td key={j} className="px-5 py-3.5"><Skeleton height={14} /></td>
+                ))}</tr>
               ))
-            ) : paginated.length === 0 ? (
+            ) : paged.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-5 py-12 text-center text-[13px] text-gray-400">
                   {search ? 'No attendees match your search' : 'No attendees for this event yet'}
                 </td>
               </tr>
             ) : (
-              paginated.map((row, i) => (
+              paged.map((row, i) => (
                 <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">
-                    {row.guest.firstName} {row.guest.lastName}
-                  </td>
+                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">{row.guest.firstName} {row.guest.lastName}</td>
                   <td className="px-5 py-3.5 text-[13px] text-gray-600">{row.guest.email}</td>
                   <td className="px-5 py-3.5 text-[13px] text-gray-600">{row.guest.phone}</td>
                   <td className="px-5 py-3.5 text-[13px] text-gray-600 capitalize">{row.guest.gender ?? '—'}</td>
@@ -210,15 +172,11 @@ export default function AttendeesPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">
-                    ₦{row.totalAmount.toLocaleString()}
-                  </td>
+                  <td className="px-5 py-3.5 text-[13px] font-medium text-gray-900">₦{row.totalAmount.toLocaleString()}</td>
                   <td className="px-5 py-3.5">
-                    <button
-                      onClick={() => handleResend(row.orderNumber, row.guest.email)}
+                    <button onClick={() => handleResend(row.orderNumber, row.guest.email)}
                       disabled={resendingId === row.orderNumber}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[#3b5bdb] text-[#3b5bdb] rounded-lg text-[12px] font-medium hover:bg-blue-50 transition-colors disabled:opacity-60"
-                    >
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[#3b5bdb] text-[#3b5bdb] rounded-lg text-[12px] font-medium hover:bg-blue-50 transition-colors disabled:opacity-60">
                       {resendingId === row.orderNumber && <Loader2 size={12} className="animate-spin" />}
                       {resendingId === row.orderNumber ? 'Sending...' : 'Resend ticket(s)'}
                     </button>
@@ -229,19 +187,7 @@ export default function AttendeesPage() {
           </tbody>
         </table>
 
-        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-          <span className="text-[12px] text-gray-500">Page {page} of {TOTAL_PAGES}</span>
-          <div className="flex items-center gap-2">
-            <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-              Previous
-            </button>
-            <button disabled={page === TOTAL_PAGES} onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-              Next
-            </button>
-          </div>
-        </div>
+        <PaginationBar page={page} totalPages={totalPages} total={total} label="attendees" onPage={setPage} />
       </div>
     </div>
   )

@@ -62,7 +62,10 @@ export interface OrderData {
 }
 
 export interface Pagination {
-  page: number; pages: number; limit: number; total: number
+  page: number
+  pages: number
+  limit: number
+  total: number
 }
 
 export interface MealTicketRow {
@@ -124,19 +127,25 @@ function normalizeOrder(order: Record<string, unknown>): OrderData {
   return { ...order, _id: (order._id ?? order.id ?? '') as string } as OrderData
 }
 
-// ── Orders ────────────────────────────────────────────────────────────────────
+// ── Orders — server-side pagination ──────────────────────────────────────────
+// Always pass eventId when fetching for a specific event.
+// page and limit are passed through to the backend.
 
-// Use limit=1000 to fetch all records — backend default is 40 which causes truncation.
-// Increase this value if order count ever exceeds 1000.
-export async function getAllOrders(eventId?: string): Promise<{ orders: OrderData[]; pagination: Pagination }> {
-  const params = new URLSearchParams({ limit: '1000' })
-  if (eventId) params.set('eventId', eventId)
-  const { data } = await api.get(`/orders?${params.toString()}`)
+export async function getAllOrders(params?: {
+  eventId?: string
+  page?: number
+  limit?: number
+}): Promise<{ orders: OrderData[]; pagination: Pagination }> {
+  const query = new URLSearchParams()
+  if (params?.eventId) query.set('eventId', params.eventId)
+  if (params?.page) query.set('page', String(params.page))
+  query.set('limit', String(params?.limit ?? 20))
+  const { data } = await api.get(`/orders?${query.toString()}`)
   const inner = data?.data ?? data
   const rawOrders = Array.isArray(inner?.orders) ? inner.orders : Array.isArray(inner) ? inner : []
   return {
     orders: rawOrders.map(normalizeOrder),
-    pagination: inner?.pagination ?? { page: 1, pages: 1, limit: 1000, total: rawOrders.length },
+    pagination: inner?.pagination ?? { page: 1, pages: 1, limit: 20, total: rawOrders.length },
   }
 }
 
@@ -145,7 +154,9 @@ export async function getOrderById(id: string): Promise<OrderData> {
   return normalizeOrder(data?.data?.order ?? data?.order ?? data?.data ?? data)
 }
 
-// ── Ticket list endpoints — high limit to avoid pagination cutoff ───────────
+// ── Ticket list endpoints — high limit since these are per-event ──────────────
+// These are always called with a specific eventId so 1000 is safe.
+// If a single event ever exceeds 1000 attendees, increase accordingly.
 
 export async function getMealTickets(eventId: string): Promise<{ list: MealTicketRow[]; pagination: TicketListPagination }> {
   const { data } = await api.get(`/orders/${eventId}/meals?limit=1000`)
