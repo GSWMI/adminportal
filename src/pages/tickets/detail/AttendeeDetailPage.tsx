@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Mail, Phone, User, Users, Loader2 } from 'lucide-react'
-import { getOrderById, resendTicket, mapPaymentStatus, type OrderData } from '../../../services/orderService'
+import { ArrowLeft, Mail, Phone, User, Users, Loader2, Download } from 'lucide-react'
+import { resendTicket, mapPaymentStatus, type OrderData } from '../../../services/orderService'
 import { getEventById, type EventData } from '../../../services/eventService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
+import { toPng } from 'html-to-image'
+import jsPDF from 'jspdf'
+import AdminTicketDocument from '../../../components/ui/AdminTicketDocument'
 
-// orderNumber is in the URL — use lookup endpoint
 async function fetchOrderByNumber(orderNumber: string): Promise<OrderData> {
   const api = (await import('../../../lib/axios')).default
   const { data } = await api.get(`/orders/lookup/${orderNumber}`)
@@ -16,18 +18,9 @@ async function fetchOrderByNumber(orderNumber: string): Promise<OrderData> {
 }
 
 const TYPE_COLORS: Record<string, { header: string; badge: string }> = {
-  meal: {
-    header: 'bg-[#3b5bdb]',
-    badge: 'bg-blue-50 text-blue-600 border-blue-200',
-  },
-  transport: {
-    header: 'bg-[#0d9488]',
-    badge: 'bg-teal-50 text-teal-600 border-teal-200',
-  },
-  accommodation: {
-    header: 'bg-[#7c3aed]',
-    badge: 'bg-purple-50 text-purple-600 border-purple-200',
-  },
+  meal: { header: 'bg-[#3b5bdb]', badge: 'bg-blue-50 text-blue-600 border-blue-200' },
+  transport: { header: 'bg-[#0d9488]', badge: 'bg-teal-50 text-teal-600 border-teal-200' },
+  accommodation: { header: 'bg-[#7c3aed]', badge: 'bg-purple-50 text-purple-600 border-purple-200' },
 }
 
 function capitalize(s: string) {
@@ -59,6 +52,8 @@ export default function AttendeeDetailPage() {
   const [event, setEvent] = useState<EventData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resending, setResending] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const ticketRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!orderNumber || !id) return
@@ -90,6 +85,47 @@ export default function AttendeeDetailPage() {
       toast.error('Failed to resend ticket')
     } finally {
       setResending(false)
+    }
+  }
+
+  const handleDownload = async () => {
+    if (!ticketRef.current || !order) return
+    setDownloading(true)
+    try {
+      // Brief delay to ensure off-screen element is fully rendered
+      await new Promise((res) => setTimeout(res, 300))
+      const dataUrl = await toPng(ticketRef.current, {
+        cacheBust: true,
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        skipFonts: true,
+        filter: (node) => {
+          // Skip external images that may cause CORS issues
+          // QR codes from qrserver are external but we allow them since they're simple
+          if (node instanceof HTMLImageElement) {
+            const src = node.getAttribute('src') ?? ''
+            // Skip blob: URLs and non-image external sources
+            if (src.startsWith('blob:')) return false
+          }
+          return true
+        },
+      })
+      const img = new Image()
+      img.src = dataUrl
+      await new Promise<void>((res) => { img.onload = () => res() })
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [img.width / 2, img.height / 2],
+      })
+      pdf.addImage(dataUrl, 'PNG', 0, 0, img.width / 2, img.height / 2)
+      pdf.save(`ticket-${order.orderNumber}.pdf`)
+      toast.success('Ticket downloaded')
+    } catch (err) {
+      console.error('Download error:', err)
+      toast.error('Failed to download ticket')
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -136,14 +172,29 @@ export default function AttendeeDetailPage() {
             {event && <p className="text-[12px] text-gray-400 mt-0.5">{event.name}</p>}
           </div>
         </div>
-        <button
-          onClick={handleResend}
-          disabled={resending}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60"
-        >
-          {resending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
-          {resending ? 'Sending...' : 'Resend ticket(s)'}
-        </button>
+
+        <div className="flex items-center gap-2">
+          {/* Download ticket button */}
+          <button
+            onClick={handleDownload}
+            disabled={downloading || qrCodes.length === 0}
+            title={qrCodes.length === 0 ? 'No tickets to download' : 'Download ticket as PDF'}
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-[13px] font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {downloading ? 'Downloading...' : 'Download ticket'}
+          </button>
+
+          {/* Resend ticket button */}
+          <button
+            onClick={handleResend}
+            disabled={resending}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60"
+          >
+            {resending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+            {resending ? 'Sending...' : 'Resend ticket(s)'}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -229,7 +280,7 @@ export default function AttendeeDetailPage() {
           </div>
         )}
 
-        {/* Tickets / QR codes */}
+        {/* Tickets */}
         {qrCodes.length > 0 && (
           <div className="flex flex-col gap-3">
             <h2 className="text-[13px] font-semibold text-gray-700 uppercase tracking-wide px-1">Tickets</h2>
@@ -237,8 +288,7 @@ export default function AttendeeDetailPage() {
               const colors = TYPE_COLORS[qr.type] ?? { header: 'bg-gray-700', badge: 'bg-gray-50 text-gray-600 border-gray-200' }
               const title = qr.type === 'meal'
                 ? `MEAL TICKET — DAY ${qr.day ?? ''}`
-                : qr.type === 'transport'
-                ? 'TRANSPORT TICKET'
+                : qr.type === 'transport' ? 'TRANSPORT TICKET'
                 : 'ACCOMMODATION TICKET'
 
               return (
@@ -246,9 +296,7 @@ export default function AttendeeDetailPage() {
                   <div className={`${colors.header} px-5 py-2.5 flex items-center justify-between`}>
                     <span className="text-white text-[12px] font-bold tracking-wide">{title}</span>
                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
-                      qr.redeemed
-                        ? 'bg-white/20 text-white border-white/30'
-                        : 'bg-green-400/30 text-white border-green-300/40'
+                      qr.redeemed ? 'bg-white/20 text-white border-white/30' : 'bg-green-400/30 text-white border-green-300/40'
                     }`}>
                       {qr.redeemed ? 'Redeemed' : 'Valid'}
                     </span>
@@ -286,6 +334,17 @@ export default function AttendeeDetailPage() {
         )}
 
       </div>
+
+      {/* Off-screen ticket document for PDF generation */}
+      {order && (
+        <div style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1, pointerEvents: 'none' }}>
+          <AdminTicketDocument
+            ref={ticketRef}
+            order={order}
+            event={event ?? { name: '', startDate: '' }}
+          />
+        </div>
+      )}
     </div>
   )
 }
