@@ -19,8 +19,8 @@ export default function LoginPage() {
     validateOnBlur: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        const { token, refreshToken, user } = await loginUser(values)
-        login(token, user, refreshToken)
+        const { token,  user } = await loginUser(values)
+        login(token, user)
         toast.success('Welcome back!')
         navigate('/dashboard')
       } catch (err: unknown) {
