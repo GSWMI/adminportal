@@ -89,10 +89,10 @@ export default function MealTicketsPage() {
     finally { setClosingReg(false) }
   }
 
-  const handleDayChange = (day: number) => {
-    setActiveDay(day)
-    setPage(1) // reset to page 1 when switching days
-  }
+  // const handleDayChange = (day: number) => {
+  //   setActiveDay(day)
+  //   setPage(1) // reset to page 1 when switching days
+  // }
 
   const handlePageChange = (p: number) => {
     setPage(p)
@@ -106,7 +106,7 @@ export default function MealTicketsPage() {
     r.orderNumber.toLowerCase().includes(search.toLowerCase())
   )
 
-  const days = Array.from({ length: totalDays }, (_, i) => i + 1)
+  // const days = Array.from({ length: totalDays }, (_, i) => i + 1)
 
   return (
     <div className="max-w-[1100px]">
