@@ -20,11 +20,13 @@ const ITEMS_PER_PAGE = 20
 export default function MealTicketsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [activeDay, setActiveDay] = useState(1)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [activeDay, _setActiveDay] = useState(1)
   const [search, setSearch] = useState('')
   const [list, setList] = useState<MealTicketRow[]>([])
   const [eventName, setEventName] = useState('')
-  const [totalDays, setTotalDays] = useState(1)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_totalDays, setTotalDays] = useState(1)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [mealRegOpen, setMealRegOpen] = useState(true)
