@@ -30,12 +30,12 @@ export default function MealTicketsPage() {
   const [mealRegOpen, setMealRegOpen] = useState(true)
   const [closingReg, setClosingReg] = useState(false)
 
-  // Server-side pagination state
+  // Server-side pagination — scoped per day
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
 
-  // Fetch event info once
+  // Fetch event info once on mount
   useEffect(() => {
     if (!id) return
     getEventById(id)
@@ -47,16 +47,19 @@ export default function MealTicketsPage() {
       .catch(() => toast.error('Failed to load event'))
   }, [id])
 
-  // Fetch meal tickets whenever day or page changes
+  // Fetch meal tickets whenever eventId, day, or page changes
+  // day is passed to the backend so pagination totals reflect that day only
   useEffect(() => {
     if (!id) return
     async function fetchTickets() {
       setLoading(true)
       try {
-        const result = await getMealTickets(id!, { page, limit: ITEMS_PER_PAGE })
-        // Filter by active day client-side since backend returns mixed days
-        const dayFiltered = result.list.filter((r) => r.day === activeDay)
-        setList(dayFiltered)
+        const result = await getMealTickets(id!, {
+          page,
+          limit: ITEMS_PER_PAGE,
+          day: activeDay,
+        })
+        setList(result.list)
         setTotalPages(result.pagination.pages ?? 1)
         setTotal(result.pagination.total ?? 0)
       } catch {
@@ -88,11 +91,15 @@ export default function MealTicketsPage() {
 
   const handleDayChange = (day: number) => {
     setActiveDay(day)
-    setPage(1)
-    setList([])
+    setPage(1) // reset to page 1 when switching days
   }
 
-  // Client-side search on current page results
+  const handlePageChange = (p: number) => {
+    setPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Client-side search on current page results only
   const filtered = list.filter((r) =>
     !search ||
     `${r.guest.firstName} ${r.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -109,18 +116,28 @@ export default function MealTicketsPage() {
             <ArrowLeft size={18} />
           </button>
           <h1 className="text-[18px] font-semibold text-gray-900">Meal tickets</h1>
-          {eventName && <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-medium">{eventName}</span>}
+          {eventName && (
+            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-medium">{eventName}</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleToggleReg} disabled={closingReg}
+          <button
+            onClick={handleToggleReg}
+            disabled={closingReg}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium border transition-colors ${
-              mealRegOpen ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'
-            }`}>
+              mealRegOpen
+                ? 'border-red-200 text-red-500 hover:bg-red-50'
+                : 'border-green-200 text-green-600 hover:bg-green-50'
+            }`}
+          >
             {closingReg && <Loader2 size={13} className="animate-spin" />}
             {mealRegOpen ? 'Close meal registration' : 'Open meal registration'}
           </button>
-          <button onClick={handleExport} disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60"
+          >
             {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
             Export CSV
           </button>
@@ -128,25 +145,36 @@ export default function MealTicketsPage() {
       </div>
 
       {/* Day tabs */}
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
+      {/* <div className="flex items-center gap-2 mb-6 flex-wrap">
         {days.map((day) => (
-          <button key={day} onClick={() => handleDayChange(day)}
+          <button
+            key={day}
+            onClick={() => handleDayChange(day)}
             className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${
               activeDay === day
                 ? 'bg-[#3b5bdb] text-white'
                 : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-            }`}>
+            }`}
+          >
             Day {day}
+            {activeDay === day && total > 0 && (
+              <span className="ml-1.5 bg-white/20 text-white text-[11px] px-1.5 py-0.5 rounded-full">
+                {total}
+              </span>
+            )}
           </button>
         ))}
-      </div>
+      </div> */}
 
       {/* Search */}
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)}
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or order number..."
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#3b5bdb]" />
+          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#3b5bdb]"
+        />
       </div>
 
       {loading ? (
@@ -159,13 +187,6 @@ export default function MealTicketsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {/* Total indicator */}
-          <div className="px-5 py-2 border-b border-gray-50 bg-gray-50/50">
-            <span className="text-[12px] text-gray-400">
-              {total} total meal ticket{total !== 1 ? 's' : ''} · showing page {page} of {totalPages}
-            </span>
-          </div>
-
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
@@ -180,7 +201,9 @@ export default function MealTicketsPage() {
                 return (
                   <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                     <td className="px-5 py-3.5">
-                      <p className="text-[13px] font-medium text-gray-900">{row.guest.firstName} {row.guest.lastName}</p>
+                      <p className="text-[13px] font-medium text-gray-900">
+                        {row.guest.firstName} {row.guest.lastName}
+                      </p>
                       <p className="text-[11px] text-gray-400">{row.guest.email}</p>
                     </td>
                     <td className="px-5 py-3.5 text-[13px] text-gray-600 font-mono">{row.orderNumber}</td>
@@ -204,7 +227,9 @@ export default function MealTicketsPage() {
                         }`}>
                           {qr.redeemed ? 'Redeemed' : 'Valid'}
                         </span>
-                      ) : <span className="text-[11px] text-gray-300">—</span>}
+                      ) : (
+                        <span className="text-[11px] text-gray-300">—</span>
+                      )}
                     </td>
                   </tr>
                 )
@@ -216,8 +241,8 @@ export default function MealTicketsPage() {
             page={page}
             totalPages={totalPages}
             total={total}
-            label="meal tickets"
-            onPage={(p) => { setPage(p); setList([]) }}
+            // label={`Day ${activeDay} meal tickets`}
+            onPage={handlePageChange}
           />
         </div>
       )}

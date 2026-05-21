@@ -158,7 +158,7 @@ export async function getOrderById(id: string): Promise<OrderData> {
 
 export async function getMealTickets(
   eventId: string,
-  params?: { page?: number; limit?: number }
+  params?: { page?: number; limit?: number, day?: number }
 ): Promise<{ list: MealTicketRow[]; pagination: TicketListPagination }> {
   const query = new URLSearchParams()
   query.set('page', String(params?.page ?? 1))
