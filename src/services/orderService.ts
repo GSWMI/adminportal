@@ -127,9 +127,7 @@ function normalizeOrder(order: Record<string, unknown>): OrderData {
   return { ...order, _id: (order._id ?? order.id ?? '') as string } as OrderData
 }
 
-// ── Orders — server-side pagination ──────────────────────────────────────────
-// Always pass eventId when fetching for a specific event.
-// page and limit are passed through to the backend.
+// ── Orders ────────────────────────────────────────────────────────────────────
 
 export async function getAllOrders(params?: {
   eventId?: string
@@ -154,39 +152,48 @@ export async function getOrderById(id: string): Promise<OrderData> {
   return normalizeOrder(data?.data?.order ?? data?.order ?? data?.data ?? data)
 }
 
-// ── Ticket list endpoints — high limit since these are per-event ──────────────
-// These are always called with a specific eventId so 1000 is safe.
-// If a single event ever exceeds 1000 attendees, increase accordingly.
+// ── Meal tickets — server-side pagination ─────────────────────────────────────
+// Uses page + limit instead of limit=1000 to avoid MongoDB 16MB BSON limit.
+// With 268 meal rows the aggregation document exceeded 16MB at limit=1000.
 
-export async function getMealTickets(eventId: string): Promise<{ list: MealTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/meals?limit=1000`)
+export async function getMealTickets(
+  eventId: string,
+  params?: { page?: number; limit?: number, day?: number }
+): Promise<{ list: MealTicketRow[]; pagination: TicketListPagination }> {
+  const query = new URLSearchParams()
+  query.set('page', String(params?.page ?? 1))
+  query.set('limit', String(params?.limit ?? 20))
+  const { data } = await api.get(`/orders/${eventId}/meals?${query.toString()}`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 20, pages: 1 },
   }
 }
 
+// ── Other ticket endpoints — keep limit=500 (accommodation/transport lists
+//    are much smaller documents and haven't hit the BSON limit) ───────────────
+
 export async function getAccommodationTickets(eventId: string): Promise<{ list: AccommodationTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/accommodations?limit=1000`)
+  const { data } = await api.get(`/orders/${eventId}/accommodations?limit=500`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 500, pages: 1 },
   }
 }
 
 export async function getTransportTickets(eventId: string): Promise<{ list: TransportTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/transports?limit=1000`)
+  const { data } = await api.get(`/orders/${eventId}/transports?limit=500`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 500, pages: 1 },
   }
 }
 
 export async function getAttendees(eventId: string): Promise<{ list: AttendeeRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/attendees?limit=1000`)
+  const { data } = await api.get(`/orders/${eventId}/attendees?limit=500`)
   return {
     list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 1000, pages: 1 },
+    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 500, pages: 1 },
   }
 }
 
