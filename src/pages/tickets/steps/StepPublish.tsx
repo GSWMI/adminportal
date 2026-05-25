@@ -10,7 +10,7 @@ interface Props {
   onPreview: () => void
 }
 
-const PUBLIC_BASE_URL = 'https://events.gswmi.com'
+const PUBLIC_BASE_URL = 'https://gswmi-attendee.netlify.app'
 
 export default function StepPublish({ onPreview }: Props) {
   const [published, setPublished] = useState(false)
