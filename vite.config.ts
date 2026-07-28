@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://gswmi-backend.onrender.com/api',
+        target: 'https://gwmi-backend-staging.onrender.com/api',
         changeOrigin: true,
         secure: true,
       }
