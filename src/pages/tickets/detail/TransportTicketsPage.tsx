@@ -14,6 +14,7 @@ export default function TransportTicketsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const [pickupFilter, setPickupFilter] = useState('all')
   const [list, setList] = useState<TransportTicketRow[]>([])
   const [eventName, setEventName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -36,11 +37,16 @@ export default function TransportTicketsPage() {
     fetchData()
   }, [id])
 
-  const filtered = list.filter((r) =>
-    !search ||
-    `${r.guest.firstName} ${r.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-    r.orderNumber.toLowerCase().includes(search.toLowerCase())
-  )
+  const pickupOptions = [...new Set(list.map((r) => r.transport.pickupLocation).filter(Boolean))].sort()
+
+  const filtered = list.filter((r) => {
+    const matchesSearch =
+      !search ||
+      `${r.guest.firstName} ${r.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+      r.orderNumber.toLowerCase().includes(search.toLowerCase())
+    const matchesPickup = pickupFilter === 'all' || r.transport.pickupLocation === pickupFilter
+    return matchesSearch && matchesPickup
+  })
 
   const { page, setPage, totalPages, total, paged } = usePagination(filtered, 20)
 
@@ -85,11 +91,23 @@ export default function TransportTicketsPage() {
         </button>
       </div>
 
-      <div className="relative mb-4">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          placeholder="Search by name or order number..."
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#3b5bdb]" />
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            placeholder="Search by name or order number..."
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#3b5bdb]" />
+        </div>
+        <select
+          value={pickupFilter}
+          onChange={(e) => { setPickupFilter(e.target.value); setPage(1) }}
+          className="py-2.5 px-3 border border-gray-200 rounded-lg text-[13px] text-gray-700 bg-white focus:outline-none focus:border-[#3b5bdb] max-w-[220px]"
+        >
+          <option value="all">All pickup locations</option>
+          {pickupOptions.map((loc) => (
+            <option key={loc} value={loc}>{loc}</option>
+          ))}
+        </select>
       </div>
 
       {loading ? <Skeleton count={5} height={52} className="mb-2" />
