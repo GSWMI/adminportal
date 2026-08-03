@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Ticket, CreditCard, Users, ChevronUp, LogOut } from 'lucide-react'
+import { LayoutDashboard, Ticket, CreditCard, Users, Settings, ChevronUp, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Tickets', icon: Ticket, to: '/tickets' },
   { label: 'Transactions', icon: CreditCard, to: '/transactions' },
   { label: 'Users', icon: Users, to: '/users' },
+  { label: 'Settings', icon: Settings, to: '/settings' },
 ]
 
 export default function Sidebar() {

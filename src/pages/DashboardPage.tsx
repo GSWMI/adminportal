@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Ticket, UserPlus, MoreVertical, ArrowUpRight, FileText } from 'lucide-react'
 import StatusBadge from '../components/ui/StatusBadge'
 import TicketTypeBadge from '../components/ui/TicketTypeBadge'
-import AddUserModal from '../components/AddUserModal'
+import InviteAdminModal from '../components/InviteAdminModal'
 import api from '../lib/axios'
 import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
 import { getAllEvents, type EventData } from '../services/eventService'
@@ -117,7 +117,7 @@ export default function DashboardPage() {
           </button>
           <button onClick={() => setShowAddUser(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all">
-            <UserPlus size={15} className="text-gray-500" />Add user
+            <UserPlus size={15} className="text-gray-500" />Add admin
           </button>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
           )}
       </div>
 
-      {showAddUser && <AddUserModal onClose={() => setShowAddUser(false)} />}
+      {showAddUser && <InviteAdminModal onClose={() => setShowAddUser(false)} />}
     </div>
   )
 }
