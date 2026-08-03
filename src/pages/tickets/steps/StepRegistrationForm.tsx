@@ -1,4 +1,4 @@
-import { User, Mail, Phone, Plus, X, Users } from 'lucide-react'
+import { User, Mail, Phone, MessageCircle, Plus, X, Users } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
 import RichTextEditor from '../../../components/ui/RichTextEditor'
 
@@ -6,10 +6,13 @@ const DEFAULT_FIELDS = [
   { icon: <User size={14} />, label: 'First name' },
   { icon: <User size={14} />, label: 'Last name' },
   { icon: <Mail size={14} />, label: 'Email address' },
-  { icon: <Phone size={14} />, label: 'WhatsApp phone number' },
+  { icon: <Phone size={14} />, label: 'Attendee phone number' },
+  { icon: <MessageCircle size={14} />, label: 'Attendee WhatsApp number' },
   { icon: <User size={14} />, label: 'Gender' },
   { icon: <Users size={14} />, label: 'Next of kin (full name)' },
   { icon: <Mail size={14} />, label: 'Next of kin (email address)' },
+  { icon: <Phone size={14} />, label: 'Next of kin (phone number)' },
+  { icon: <MessageCircle size={14} />, label: 'Next of kin (WhatsApp number)' },
 ]
 
 function generateId() {
