@@ -84,6 +84,7 @@ export interface TicketFormData {
   // Step 4 - Registration form
   customFields: CustomField[]
   consentText: string
+  whatsappGroupLink: string
 
   // Meta
   currentStep: number
@@ -142,6 +143,7 @@ const initialForm: TicketFormData = {
   transport: { name: '', description: '', pickups: [] },
   customFields: [],
   consentText: '',
+  whatsappGroupLink: '',
   currentStep: 0,
   completedSteps: [],
 }
