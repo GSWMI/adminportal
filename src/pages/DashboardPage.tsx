@@ -6,6 +6,7 @@ import TicketTypeBadge from '../components/ui/TicketTypeBadge'
 import AddUserModal from '../components/AddUserModal'
 import api from '../lib/axios'
 import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
+import { getAllEvents, type EventData } from '../services/eventService'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
@@ -29,20 +30,30 @@ export default function DashboardPage() {
   const [showAddUser, setShowAddUser] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [orders, setOrders] = useState<OrderData[]>([])
+  const [events, setEvents] = useState<EventData[]>([])
+  const [selectedEvent, setSelectedEvent] = useState('') // '' = all events (cumulative)
   const [stats, setStats] = useState<DashboardStats>({
     ticketsCreated: 0, totalOrders: 0, totalRevenue: 0, paidOrders: 0, pendingOrders: 0,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Load the event list once for the filter dropdown
+  useEffect(() => {
+    getAllEvents().then(setEvents).catch(() => { /* dropdown just stays empty */ })
+  }, [])
+
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
-        // Single call without eventId returns aggregate across all events
+        setError(null)
+        // Without eventId the endpoint returns the aggregate across all events;
+        // with eventId it returns stats scoped to that single event.
+        const statsParams = selectedEvent ? `?eventId=${selectedEvent}` : ''
         const [statsRes, ordersResult] = await Promise.all([
-          api.get('/events/admin/dashboard'),
-          getAllOrders(),
+          api.get(`/events/admin/dashboard${statsParams}`),
+          getAllOrders(selectedEvent ? { eventId: selectedEvent } : undefined),
         ])
 
         const fetchedOrders = Array.isArray(ordersResult.orders) ? ordersResult.orders : []
@@ -50,7 +61,8 @@ export default function DashboardPage() {
 
         const inner = statsRes.data?.data ?? statsRes.data
         setStats({
-          ticketsCreated: inner?.totalEvents ?? 0,
+          // Single-event responses omit totalEvents; that view represents one event
+          ticketsCreated: inner?.totalEvents ?? (selectedEvent ? 1 : 0),
           totalOrders: inner?.totalOrders ?? 0,
           totalRevenue: inner?.totalRevenue ?? 0,
           paidOrders: inner?.paidOrders ?? 0,
@@ -64,14 +76,26 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [])
+  }, [selectedEvent])
 
   const recentOrders = orders.slice(0, 7)
   const hasOrders = orders.length > 0
 
   return (
     <div className="max-w-[1100px]">
-      <h1 className="text-[22px] font-semibold text-gray-900 mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-[22px] font-semibold text-gray-900">Dashboard</h1>
+        <select
+          value={selectedEvent}
+          onChange={(e) => setSelectedEvent(e.target.value)}
+          className="py-2 px-3 border border-gray-200 rounded-lg text-[13px] text-gray-700 bg-white focus:outline-none focus:border-[#3b5bdb] max-w-[260px]"
+        >
+          <option value="">All events (cumulative)</option>
+          {events.map((ev) => (
+            <option key={ev._id} value={ev._id}>{ev.name}</option>
+          ))}
+        </select>
+      </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
         <StatCard label="Tickets created" value={stats.ticketsCreated} loading={loading} />
