@@ -52,6 +52,7 @@ export interface EventData {
   mealOptions?: MealOptionGroup[]
   customQuestions?: CustomQuestion[]
   consentText?: string
+  whatsappLink?: string
   registrationOpen: boolean
   mealRegistrationOpen: boolean
   accommodationRegistrationOpen: boolean

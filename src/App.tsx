@@ -4,7 +4,6 @@ import ProtectedRoute from './components/ProtectedRoute'
 import DashboardLayout from './components/layout/DashboardLayout'
 import LoginPage from './pages/LoginPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
-import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import SetPasswordPage from './pages/auth/SetPasswordPage'
 import SettingsPage from './pages/SettingsPage'
 import DashboardPage from './pages/DashboardPage'
@@ -30,8 +29,10 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* Unified set-password page. /reset-password kept as an alias so any older
+              reset links still resolve; the backend now links both to /set-password. */}
           <Route path="/set-password" element={<SetPasswordPage />} />
+          <Route path="/reset-password" element={<SetPasswordPage />} />
           <Route path="/tickets/preview" element={<ProtectedRoute><TicketPreviewPage /></ProtectedRoute>} />
           <Route path="/events/s/:slug" element={<PublicEventPage />} />
 

@@ -7,15 +7,17 @@ const passwordRule = Yup.string()
   .min(PASSWORD_MIN, `Password must be at least ${PASSWORD_MIN} characters`)
   .required('Password is required')
 
-// ── Set password (new-admin onboarding) ────────────────────────────────────────
+// ── Set password (unified: new-admin onboarding AND forgot-password reset) ──────
 export const setPasswordInitialValues = {
-  username: '',
-  password: '',
+  newPassword: '',
+  confirmPassword: '',
 }
 
 export const setPasswordSchema = Yup.object({
-  username: Yup.string().trim().required('Username is required'),
-  password: passwordRule,
+  newPassword: passwordRule,
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref('newPassword')], 'Passwords do not match')
+    .required('Please confirm your password'),
 })
 
 // ── Forgot password (request reset link) ────────────────────────────────────────
@@ -25,19 +27,6 @@ export const forgotPasswordInitialValues = {
 
 export const forgotPasswordSchema = Yup.object({
   email: Yup.string().email('Enter a valid email').required('Email is required'),
-})
-
-// ── Reset password (from emailed link) ──────────────────────────────────────────
-export const resetPasswordInitialValues = {
-  newPassword: '',
-  confirmPassword: '',
-}
-
-export const resetPasswordSchema = Yup.object({
-  newPassword: passwordRule,
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref('newPassword')], 'Passwords do not match')
-    .required('Please confirm your password'),
 })
 
 // ── Change password (logged-in admin) ───────────────────────────────────────────

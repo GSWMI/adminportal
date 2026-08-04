@@ -52,7 +52,10 @@ export default function TransportTicketsPage() {
 
   const handleExport = async () => {
     setExporting(true)
-    try { await exportTransportTicketsCsv(id); toast.success('Transport tickets exported') }
+    try {
+      await exportTransportTicketsCsv(id, pickupFilter !== 'all' ? pickupFilter : undefined)
+      toast.success('Transport tickets exported')
+    }
     catch { toast.error('Export failed') }
     finally { setExporting(false) }
   }

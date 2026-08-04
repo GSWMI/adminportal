@@ -68,7 +68,7 @@ function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onRemove, o
   openMenuId: string | null
   setOpenMenuId: (id: string | null) => void
   onRemove: (id: string) => void
-  onResend: (email: string) => void
+  onResend: (id: string) => void
 }) {
   const menuOpen = openMenuId === admin.id
   const isPending = admin.status?.toLowerCase() === 'pending'
@@ -111,7 +111,7 @@ function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onRemove, o
                   View details
                 </button>
                 {canResend && (
-                  <button onClick={() => { setOpenMenuId(null); onResend(admin.email) }}
+                  <button onClick={() => { setOpenMenuId(null); onResend(admin.id) }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
                     Resend invite
                   </button>
@@ -187,9 +187,9 @@ export default function UsersPage() {
     toast.success('User removed')
   }
 
-  const handleResend = async (email: string) => {
+  const handleResend = async (id: string) => {
     try {
-      await resendInvite(email)
+      await resendInvite(id)
       toast.success('Invite resent')
     } catch (err: unknown) {
       const message =

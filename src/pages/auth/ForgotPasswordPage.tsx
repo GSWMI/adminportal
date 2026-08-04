@@ -68,6 +68,7 @@ export default function ForgotPasswordPage() {
             <input
               type="email"
               name="email"
+              autoComplete="email"
               value={formik.values.email}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}

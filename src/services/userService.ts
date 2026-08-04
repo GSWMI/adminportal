@@ -35,10 +35,9 @@ export async function inviteAdmin(payload: InviteAdminPayload): Promise<InvitedA
   }
 }
 
-// Resend an invite to a pending admin (by email).
-// CONFIRM #4: endpoint not yet in the collection — assuming POST /auth/admin/resend { email }.
-export async function resendInvite(email: string): Promise<void> {
-  await api.post('/auth/admin/resend', { email })
+// Resend an invite to a pending admin. POST /auth/admin/:id/resend-invite (no body).
+export async function resendInvite(id: string): Promise<void> {
+  await api.post(`/auth/admin/${id}/resend-invite`)
 }
 
 // List admins for the Users page.

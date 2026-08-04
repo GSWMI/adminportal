@@ -80,6 +80,7 @@ function ChangePasswordPanel() {
         <PasswordField
           label="Current password"
           name="currentPassword"
+          autoComplete="current-password"
           value={formik.values.currentPassword}
           visible={show.current}
           onToggle={() => setShow((s) => ({ ...s, current: !s.current }))}
@@ -88,6 +89,7 @@ function ChangePasswordPanel() {
         <PasswordField
           label="New password"
           name="newPassword"
+          autoComplete="new-password"
           value={formik.values.newPassword}
           visible={show.next}
           onToggle={() => setShow((s) => ({ ...s, next: !s.next }))}
@@ -96,6 +98,7 @@ function ChangePasswordPanel() {
         <PasswordField
           label="Confirm new password"
           name="confirmPassword"
+          autoComplete="new-password"
           value={formik.values.confirmPassword}
           visible={show.confirm}
           onToggle={() => setShow((s) => ({ ...s, confirm: !s.confirm }))}
@@ -122,6 +125,7 @@ function ChangePasswordPanel() {
 interface PasswordFieldProps {
   label: string
   name: string
+  autoComplete: string
   value: string
   visible: boolean
   onToggle: () => void
@@ -133,7 +137,7 @@ interface PasswordFieldProps {
   }
 }
 
-function PasswordField({ label, name, value, visible, onToggle, formik }: PasswordFieldProps) {
+function PasswordField({ label, name, autoComplete, value, visible, onToggle, formik }: PasswordFieldProps) {
   const touched = formik.touched[name]
   const error = formik.errors[name]
   return (
@@ -144,6 +148,7 @@ function PasswordField({ label, name, value, visible, onToggle, formik }: Passwo
         <input
           type={visible ? 'text' : 'password'}
           name={name}
+          autoComplete={autoComplete}
           value={value}
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}

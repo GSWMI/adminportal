@@ -85,6 +85,10 @@ export function mapFormToEventPayload(form: TicketFormData): FormData {
   fd.append('totalDays', String(Number(form.totalDays) || form.days.length || 1))
   fd.append('location', form.location.trim())
   fd.append('consentText', stripHtml(form.consentText) || form.consentText || '')
+  // Optional WhatsApp group link — only sent when the admin provides one.
+  if (form.whatsappGroupLink?.trim()) {
+    fd.append('whatsappLink', form.whatsappGroupLink.trim())
+  }
   fd.append('registrationOpen', 'true')
   fd.append('mealRegistrationOpen', String(form.ticketTypes.includes('Meal')))
   fd.append('accommodationRegistrationOpen', String(form.ticketTypes.includes('Accommodation')))
