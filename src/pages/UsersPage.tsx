@@ -62,12 +62,11 @@ function SortIcon() {
   )
 }
 
-function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onRemove, onResend }: {
+function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onResend }: {
   admin: AdminUser
   isCurrentUser: boolean
   openMenuId: string | null
   setOpenMenuId: (id: string | null) => void
-  onRemove: (id: string) => void
   onResend: (id: string) => void
 }) {
   const menuOpen = openMenuId === admin.id
@@ -116,8 +115,10 @@ function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onRemove, o
                     Resend invite
                   </button>
                 )}
-                <button onClick={() => { setOpenMenuId(null); onRemove(admin.id) }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap">
+                <button
+                  disabled
+                  title="Coming soon"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-300 cursor-not-allowed whitespace-nowrap">
                   Remove user
                 </button>
               </div>
@@ -181,11 +182,6 @@ export default function UsersPage() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
-
-  const handleRemove = (id: string) => {
-    setAdmins((prev) => prev.filter((u) => u.id !== id))
-    toast.success('User removed')
-  }
 
   const handleResend = async (id: string) => {
     try {
@@ -272,7 +268,7 @@ export default function UsersPage() {
                     <AdminRow key={admin.id} admin={admin}
                       isCurrentUser={admin.email === currentUser?.email}
                       openMenuId={openMenuId} setOpenMenuId={setOpenMenuId}
-                      onRemove={handleRemove} onResend={handleResend} />
+                      onResend={handleResend} />
                   ))
                 )}
               </tbody>
