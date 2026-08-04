@@ -48,3 +48,32 @@ export async function fetchProfile(): Promise<AuthUser> {
   const { data } = await api.get('/auth/profile')
   return mapProfile(data)
 }
+
+// ── Password lifecycle ─────────────────────────────────────────────────────────
+
+interface SetPasswordPayload {
+  token: string
+  newPassword: string
+}
+
+// Single token-based set-password endpoint used for BOTH new-admin onboarding and
+// forgot-password reset — the token in the body carries the context, so the flows are
+// unified (per backend). Body shape per Postman: { token, password }.
+export async function setPassword({ token, newPassword }: SetPasswordPayload): Promise<void> {
+  await api.post('/auth/set-password', { token, password: newPassword })
+}
+
+// Forgot-password: request a reset link by email. Backend emails a /set-password?token= link.
+export async function forgotPassword(email: string): Promise<void> {
+  await api.post('/auth/forgot-password', { email })
+}
+
+interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+}
+
+// Change password for the logged-in admin (JWT attached by the axios interceptor).
+export async function changePassword({ currentPassword, newPassword }: ChangePasswordPayload): Promise<void> {
+  await api.post('/auth/change-password', { currentPassword, newPassword })
+}

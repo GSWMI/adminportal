@@ -1,28 +1,53 @@
 import api from '../lib/axios'
 
-export interface AddUserPayload {
+export interface InviteAdminPayload {
   firstName: string
   lastName: string
   email: string
   phone: string
-  password: string
-  role: 'admin' | 'subadmin'
 }
 
-export interface AddUserResult {
+export interface InvitedAdmin {
   firstName: string
   lastName: string
   email: string
-  role: string
 }
 
-export async function addUser(payload: AddUserPayload): Promise<AddUserResult> {
-  const { data } = await api.post('/auth/register', payload)
-  const user = data.user ?? data.data ?? data
+export interface AdminUser {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  role: string
+  status?: string // e.g. 'pending' | 'active' — CONFIRM #6 whether backend returns this
+  createdAt?: string
+}
+
+// New-admin invite. Backend emails a set-password link — no password is set here.
+export async function inviteAdmin(payload: InviteAdminPayload): Promise<InvitedAdmin> {
+  const { data } = await api.post('/auth/admin', payload)
+  const admin = data?.data?.admin ?? data?.data ?? data?.admin ?? data
   return {
-    firstName: user.firstName ?? payload.firstName,
-    lastName: user.lastName ?? payload.lastName,
-    email: user.email ?? payload.email,
-    role: user.role ?? payload.role,
+    firstName: admin?.firstName ?? payload.firstName,
+    lastName: admin?.lastName ?? payload.lastName,
+    email: admin?.email ?? payload.email,
   }
+}
+
+// Resend an invite to a pending admin. POST /auth/admin/:id/resend-invite (no body).
+export async function resendInvite(id: string): Promise<void> {
+  await api.post(`/auth/admin/${id}/resend-invite`)
+}
+
+// List admins for the Users page.
+export async function getAdmins(): Promise<AdminUser[]> {
+  const { data } = await api.get('/auth/admins')
+  const list = data?.data?.admins ?? data?.data ?? data?.admins ?? []
+  return Array.isArray(list)
+    ? list.map(
+        (a: Record<string, unknown>) =>
+          ({ ...a, id: (a.id ?? a._id ?? '') as string } as AdminUser)
+      )
+    : []
 }

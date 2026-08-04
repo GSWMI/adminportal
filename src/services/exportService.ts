@@ -29,10 +29,12 @@ export async function exportMealTicketsCsv(eventId?: string): Promise<void> {
   triggerDownload(response.data, `meal-tickets-${dateStamp()}.csv`)
 }
 
-// Transport tickets — eventId required
-export async function exportTransportTicketsCsv(eventId?: string): Promise<void> {
+// Transport tickets — eventId required; optional pickupLocation filter
+export async function exportTransportTicketsCsv(eventId?: string, pickupLocation?: string): Promise<void> {
   if (!eventId) throw new Error('eventId is required for transport ticket export')
-  const response = await api.get(`/orders/export/transport-tickets?eventId=${eventId}`, { responseType: 'blob' })
+  const query = new URLSearchParams({ eventId })
+  if (pickupLocation) query.set('pickupLocation', pickupLocation)
+  const response = await api.get(`/orders/export/transport-tickets?${query.toString()}`, { responseType: 'blob' })
   triggerDownload(response.data, `transport-tickets-${dateStamp()}.csv`)
 }
 

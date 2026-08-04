@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useFormik } from 'formik'
 import { toast } from 'sonner'
 import { useAuth } from '../hooks/useAuth'
 import { loginSchema, loginInitialValues } from '../validations/authValidation'
 import { loginUser } from '../services/authService'
+import AuthLayout from '../components/layout/AuthLayout'
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -41,19 +42,13 @@ export default function LoginPage() {
   const isFilled = formik.values.email.trim() !== '' && formik.values.password.trim() !== ''
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <header className="bg-[#0d1b2a] py-4 px-6 flex items-center justify-center">
-        <GswmiLogo />
-      </header>
-
-      <main className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-85">
-          <div className="text-center mb-8">
-            <h1 className="text-[22px] font-semibold text-gray-900 mb-1">
-              Welcome to GSWMI Ticketing Portal
-            </h1>
-            <p className="text-[15px] text-gray-500">Login to continue</p>
-          </div>
+    <AuthLayout>
+      <div className="text-center mb-8">
+        <h1 className="text-[22px] font-semibold text-gray-900 mb-1">
+          Welcome to GSWMI Ticketing Portal
+        </h1>
+        <p className="text-[15px] text-gray-500">Login to continue</p>
+      </div>
 
           <form onSubmit={formik.handleSubmit} className="flex flex-col gap-5">
             {/* Email */}
@@ -66,6 +61,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   name="email"
+                  autoComplete="username"
                   value={formik.values.email}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -92,6 +88,7 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
+                  autoComplete="current-password"
                   value={formik.values.password}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -115,6 +112,16 @@ export default function LoginPage() {
               )}
             </div>
 
+            {/* Forgot password */}
+            <div className="text-center -mt-2">
+              <Link
+                to="/forgot-password"
+                className="text-[13px] font-medium text-[#3b5bdb] hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
@@ -129,18 +136,6 @@ export default function LoginPage() {
               Login
             </button>
           </form>
-        </div>
-      </main>
-
-      <footer className="bg-gray-100 py-3 text-center text-[13px] text-gray-500">
-        © GSWMI Logistics Team
-      </footer>
-    </div>
-  )
-}
-
-function GswmiLogo() {
-  return (
-    <img src="/logo.png" alt="GSWMI" className="h-10 object-contain" />
+    </AuthLayout>
   )
 }

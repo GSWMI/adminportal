@@ -1,4 +1,4 @@
-import { User, Mail, Phone, Plus, X, Users } from 'lucide-react'
+import { User, Mail, Phone, MessageCircle, Plus, X, Users } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
 import RichTextEditor from '../../../components/ui/RichTextEditor'
 
@@ -6,10 +6,13 @@ const DEFAULT_FIELDS = [
   { icon: <User size={14} />, label: 'First name' },
   { icon: <User size={14} />, label: 'Last name' },
   { icon: <Mail size={14} />, label: 'Email address' },
-  { icon: <Phone size={14} />, label: 'WhatsApp phone number' },
+  { icon: <Phone size={14} />, label: 'Attendee phone number' },
+  { icon: <MessageCircle size={14} />, label: 'Attendee WhatsApp number' },
   { icon: <User size={14} />, label: 'Gender' },
   { icon: <Users size={14} />, label: 'Next of kin (full name)' },
   { icon: <Mail size={14} />, label: 'Next of kin (email address)' },
+  { icon: <Phone size={14} />, label: 'Next of kin (phone number)' },
+  { icon: <MessageCircle size={14} />, label: 'Next of kin (WhatsApp number)' },
 ]
 
 function generateId() {
@@ -17,7 +20,7 @@ function generateId() {
 }
 
 export default function StepRegistrationForm() {
-  const { form, addCustomField, removeCustomField, updateCustomField, updateConsentText } = useTicketStore()
+  const { form, addCustomField, removeCustomField, updateCustomField, updateConsentText, updateEventInfo } = useTicketStore()
 
   const handleAddQuestion = () => {
     addCustomField({
@@ -102,6 +105,25 @@ export default function StepRegistrationForm() {
           <Plus size={14} />
           {form.customFields.length > 0 ? 'Add another question' : 'Add a question'}
         </button>
+      </div>
+
+      {/* WhatsApp group link */}
+      <div className="border-t border-gray-100 pt-5 mb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <MessageCircle size={14} className="text-green-500" />
+          <p className="text-[13px] font-semibold text-gray-800">WhatsApp group link</p>
+          <span className="text-[11px] text-gray-400 font-normal">(optional)</span>
+        </div>
+        <p className="text-[12px] text-gray-500 mb-3">
+          Attendees will be able to join this group after registering
+        </p>
+        <input
+          type="url"
+          value={form.whatsappGroupLink}
+          onChange={(e) => updateEventInfo({ whatsappGroupLink: e.target.value })}
+          placeholder="https://chat.whatsapp.com/..."
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[13px] text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
+        />
       </div>
 
       {/* Consent & Terms */}

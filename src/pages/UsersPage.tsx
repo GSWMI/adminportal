@@ -1,22 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { UserPlus, Search, MoreVertical, Plus } from 'lucide-react'
-import AddUserModal from '../components/AddUserModal'
+import InviteAdminModal from '../components/InviteAdminModal'
 import { toast } from 'sonner'
 import { getActivityLog, type ActivityLogItem } from '../services/eventService'
-import api from '../lib/axios'
+import { getAdmins, resendInvite, type AdminUser } from '../services/userService'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { useAuth } from '../hooks/useAuth'
-
-interface AdminUser {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone?: string
-  role: string
-  createdAt?: string
-}
 
 function formatTimestamp(s: string) {
   if (!s) return '—'
@@ -72,14 +62,18 @@ function SortIcon() {
   )
 }
 
-function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onRemove }: {
+function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onResend }: {
   admin: AdminUser
   isCurrentUser: boolean
   openMenuId: string | null
   setOpenMenuId: (id: string | null) => void
-  onRemove: (id: string) => void
+  onResend: (id: string) => void
 }) {
   const menuOpen = openMenuId === admin.id
+  const isPending = admin.status?.toLowerCase() === 'pending'
+  // Show "Resend invite" only for pending admins when a status is returned;
+  // if the backend doesn't return a status, show it for everyone (fallback).
+  const canResend = admin.status ? isPending : true
   return (
     <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
       <td className="px-5 py-3.5">
@@ -88,9 +82,19 @@ function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onRemove }:
       </td>
       <td className="px-5 py-3.5 text-[13px] text-gray-500">{formatTimestamp(admin.createdAt ?? '')}</td>
       <td className="px-5 py-3.5">
-        <span className="px-3 py-1 border border-gray-200 rounded-lg text-[12px] text-gray-600 bg-white">
-          {isCurrentUser ? 'This is you' : capitalize(admin.role)}
-        </span>
+        {isCurrentUser ? (
+          <span className="px-3 py-1 border border-gray-200 rounded-lg text-[12px] text-gray-600 bg-white">
+            This is you
+          </span>
+        ) : isPending ? (
+          <span className="px-3 py-1 rounded-lg text-[12px] font-medium bg-amber-50 text-amber-600 border border-amber-200">
+            Pending
+          </span>
+        ) : (
+          <span className="px-3 py-1 border border-gray-200 rounded-lg text-[12px] text-gray-600 bg-white">
+            {capitalize(admin.role)}
+          </span>
+        )}
       </td>
       <td className="px-3 py-3.5 relative w-10">
         {!isCurrentUser && (
@@ -105,8 +109,16 @@ function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onRemove }:
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
                   View details
                 </button>
-                <button onClick={() => { setOpenMenuId(null); onRemove(admin.id) }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap">
+                {canResend && (
+                  <button onClick={() => { setOpenMenuId(null); onResend(admin.id) }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap">
+                    Resend invite
+                  </button>
+                )}
+                <button
+                  disabled
+                  title="Coming soon"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-300 cursor-not-allowed whitespace-nowrap">
                   Remove user
                 </button>
               </div>
@@ -135,8 +147,8 @@ export default function UsersPage() {
   const fetchAdmins = async () => {
     setAdminsLoading(true)
     try {
-      const { data } = await api.get('/auth/admins')
-      setAdmins(data?.data?.admins ?? [])
+      const list = await getAdmins()
+      setAdmins(list)
     } catch {
       toast.error('Failed to load users')
     } finally {
@@ -171,9 +183,16 @@ export default function UsersPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const handleRemove = (id: string) => {
-    setAdmins((prev) => prev.filter((u) => u.id !== id))
-    toast.success('User removed')
+  const handleResend = async (id: string) => {
+    try {
+      await resendInvite(id)
+      toast.success('Invite resent')
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message ?? 'Failed to resend invite'
+      toast.error(message)
+    }
   }
 
   const filteredAdmins = admins.filter((u) =>
@@ -194,7 +213,7 @@ export default function UsersPage() {
         <h1 className="text-[22px] font-semibold text-gray-900">Users</h1>
         <button onClick={() => setShowAddUser(true)}
           className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors whitespace-nowrap">
-          <UserPlus size={15} />Add user
+          <UserPlus size={15} />Add admin
         </button>
       </div>
 
@@ -248,7 +267,8 @@ export default function UsersPage() {
                   filteredAdmins.map((admin) => (
                     <AdminRow key={admin.id} admin={admin}
                       isCurrentUser={admin.email === currentUser?.email}
-                      openMenuId={openMenuId} setOpenMenuId={setOpenMenuId} onRemove={handleRemove} />
+                      openMenuId={openMenuId} setOpenMenuId={setOpenMenuId}
+                      onResend={handleResend} />
                   ))
                 )}
               </tbody>
@@ -256,7 +276,7 @@ export default function UsersPage() {
             <div className="px-5 py-3 border-t border-gray-100">
               <button onClick={() => setShowAddUser(true)}
                 className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] text-gray-600 hover:bg-gray-50 transition-colors">
-                <Plus size={14} />Add user
+                <Plus size={14} />Add admin
               </button>
             </div>
           </>
@@ -340,7 +360,7 @@ export default function UsersPage() {
       </div>
 
       {showAddUser && (
-        <AddUserModal onClose={() => { setShowAddUser(false); fetchAdmins() }} />
+        <InviteAdminModal onClose={() => { setShowAddUser(false); fetchAdmins() }} />
       )}
     </div>
   )
