@@ -24,7 +24,7 @@ export interface AccommodationApiPayload {
   description: string
   price: number
   peoplePerRoom: number
-  totalCapacity: number
+  capacity: number // backend expects `capacity` (our wizard tracks it as totalCapacity)
   available: boolean
   amenities: string[]
   eventId: string
@@ -122,7 +122,7 @@ export function mapAccommodationPayload(
     description: stripHtml(acc.description) || acc.description,
     price: acc.price,
     peoplePerRoom: acc.peoplePerRoom,
-    totalCapacity: acc.totalCapacity,
+    capacity: acc.totalCapacity,
     available: true,
     amenities: [],
     eventId,
