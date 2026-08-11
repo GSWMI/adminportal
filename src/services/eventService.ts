@@ -23,6 +23,7 @@ export interface AccommodationData {
   description: string
   price: number
   capacity: number
+  remainingCapacity?: number // spots left — returned on fetch; use for availability display
   available: boolean
   amenities: string[]
   eventId: string
