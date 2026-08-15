@@ -7,6 +7,8 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import SetPasswordPage from './pages/auth/SetPasswordPage'
 import SettingsPage from './pages/SettingsPage'
 import ContributionsPage from './pages/ContributionsPage'
+import SponsorshipDetailPage from './pages/contributions/SponsorshipDetailPage'
+import DonationDetailPage from './pages/contributions/DonationDetailPage'
 import DashboardPage from './pages/DashboardPage'
 import TicketsPage from './pages/TicketsPage'
 import NewTicketPage from './pages/tickets/NewTicketPage'
@@ -52,6 +54,8 @@ export default function App() {
             <Route path="transactions/:id" element={<TransactionDetailPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="contributions" element={<ContributionsPage />} />
+            <Route path="contributions/sponsorship/:id" element={<SponsorshipDetailPage />} />
+            <Route path="contributions/donation/:id" element={<DonationDetailPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

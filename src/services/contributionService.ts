@@ -60,6 +60,11 @@ export async function getSponsorships(eventId: string): Promise<Sponsorship[]> {
   return eventId ? arr.filter((s) => s.eventId === eventId) : arr
 }
 
+export async function getSponsorshipById(id: string): Promise<Sponsorship> {
+  const { data } = await api.get(`/sponsorships/${id}`)
+  return data?.data?.sponsorship ?? data?.data ?? data?.sponsorship ?? data
+}
+
 export async function getSponsorshipTickets(eventId: string): Promise<SponsorshipTicket[]> {
   const { data } = await api.get(`/sponsorships/tickets?eventId=${eventId}`)
   const list = data?.data?.tickets ?? data?.tickets ?? []
@@ -86,4 +91,9 @@ export async function getDonations(eventId: string): Promise<Donation[]> {
   const { data } = await api.get(`/donations/?eventId=${eventId}`)
   const list = data?.data?.donations ?? data?.donations ?? []
   return Array.isArray(list) ? list : []
+}
+
+export async function getDonationById(id: string): Promise<Donation> {
+  const { data } = await api.get(`/donations/${id}`)
+  return data?.data?.donation ?? data?.data ?? data?.donation ?? data
 }

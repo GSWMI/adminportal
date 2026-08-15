@@ -1,0 +1,87 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
+import { getDonationById, type Donation } from '../../services/contributionService'
+import { formatDate, money } from './format'
+import { PaymentStatusPill, Card, Row } from './parts'
+
+export default function DonationDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [donation, setDonation] = useState<Donation | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    async function fetchData() {
+      setLoading(true)
+      try {
+        const d = await getDonationById(id!)
+        if (!cancelled) setDonation(d)
+      } catch {
+        if (!cancelled) toast.error('Failed to load donation')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchData()
+    return () => { cancelled = true }
+  }, [id])
+
+  const anon = donation?.isAnonymous
+
+  return (
+    <div className="max-w-[820px]">
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => navigate('/contributions')} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <ArrowLeft size={18} />
+        </button>
+        <h1 className="text-[18px] font-semibold text-gray-900">Donation</h1>
+        {donation && (
+          <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-mono">{donation.referenceNumber}</span>
+        )}
+      </div>
+
+      {loading ? (
+        <Skeleton count={3} height={60} className="mb-3" />
+      ) : !donation ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-[14px] text-gray-400">
+          Donation not found
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <Card title="Donor">
+            {anon ? (
+              <p className="text-[13px] text-gray-500 italic py-2">
+                Anonymous — the donor chose to hide their details.
+              </p>
+            ) : (
+              <>
+                <Row label="Name" value={donation.sponsor?.name} />
+                <Row label="Email" value={donation.sponsor?.email} />
+                <Row label="Phone" value={donation.sponsor?.phone} />
+              </>
+            )}
+          </Card>
+
+          <Card title="Payment">
+            <Row label="Amount" value={money(donation.amount)} />
+            <Row label="Platform fee" value={money(donation.platformFee)} />
+            <Row label="Total amount" value={money(donation.totalAmount)} strong />
+            <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
+              <span className="text-[13px] font-medium text-gray-500">Status</span>
+              <PaymentStatusPill status={donation.paymentStatus} />
+            </div>
+            <Row label="Payment reference" value={donation.referenceNumber} mono />
+            <Row label="Created" value={formatDate(donation.createdAt)} />
+            {donation.paidAt && <Row label="Paid" value={formatDate(donation.paidAt)} />}
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
