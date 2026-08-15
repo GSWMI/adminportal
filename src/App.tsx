@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import SetPasswordPage from './pages/auth/SetPasswordPage'
 import SettingsPage from './pages/SettingsPage'
+import ContributionsPage from './pages/ContributionsPage'
 import DashboardPage from './pages/DashboardPage'
 import TicketsPage from './pages/TicketsPage'
 import NewTicketPage from './pages/tickets/NewTicketPage'
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="transactions/:id" element={<TransactionDetailPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="contributions" element={<ContributionsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

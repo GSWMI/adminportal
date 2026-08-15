@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, Download, Loader2 } from 'lucide-react'
 import { getAccommodationTickets, type AccommodationTicketRow } from '../../../services/orderService'
-import { updateRegistration, getEventById } from '../../../services/eventService'
+import { updateRegistration, getEventById, getEventAccommodations, type AccommodationData } from '../../../services/eventService'
 import { exportAccommodationTicketsCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -15,6 +15,7 @@ export default function AccommodationTicketsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [list, setList] = useState<AccommodationTicketRow[]>([])
+  const [accommodations, setAccommodations] = useState<AccommodationData[]>([])
   const [eventName, setEventName] = useState('')
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -26,8 +27,13 @@ export default function AccommodationTicketsPage() {
     async function fetchData() {
       setLoading(true)
       try {
-        const [result, event] = await Promise.all([getAccommodationTickets(id!), getEventById(id!)])
+        const [result, event, accs] = await Promise.all([
+          getAccommodationTickets(id!),
+          getEventById(id!),
+          getEventAccommodations(id!).catch(() => [] as AccommodationData[]),
+        ])
         setList(result.list)
+        setAccommodations(accs)
         setEventName(event.name)
         setAccRegOpen(event.accommodationRegistrationOpen ?? true)
       } catch { toast.error('Failed to load accommodation tickets') }
@@ -84,6 +90,39 @@ export default function AccommodationTicketsPage() {
           Export CSV
         </button>
       </div>
+
+      {accommodations.length > 0 && (
+        <div className="mb-5">
+          <p className="text-[13px] font-semibold text-gray-800 mb-2">Room availability</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {accommodations.map((acc) => {
+              const total = acc.totalCapacity ?? acc.capacity ?? 0
+              const remaining = acc.remainingCapacity ?? total
+              const booked = Math.max(0, total - remaining)
+              const pct = total > 0 ? Math.min(100, Math.round((booked / total) * 100)) : 0
+              const full = total > 0 && remaining <= 0
+              return (
+                <div key={acc.id ?? acc._id ?? acc.name} className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <p className="text-[13px] font-medium text-gray-900 truncate">{acc.name}</p>
+                    {full ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-50 text-red-500 border border-red-200 shrink-0">Full</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-600 border border-green-200 shrink-0">{remaining} left</span>
+                    )}
+                  </div>
+                  <p className="text-[12px] text-gray-500 mb-2">
+                    <span className="font-semibold text-gray-800">{remaining}</span> of {total} spots remaining
+                  </p>
+                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${full ? 'bg-red-400' : 'bg-[#3b5bdb]'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

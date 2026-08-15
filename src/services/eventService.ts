@@ -19,11 +19,14 @@ export interface CustomQuestion {
 
 export interface AccommodationData {
   _id: string
+  id?: string // fetch returns `id` rather than `_id`
   name: string
   description: string
   price: number
   capacity: number
+  totalCapacity?: number // fetch returns `totalCapacity`; create takes `capacity`
   remainingCapacity?: number // spots left — returned on fetch; use for availability display
+  peoplePerRoom?: number
   available: boolean
   amenities: string[]
   eventId: string
