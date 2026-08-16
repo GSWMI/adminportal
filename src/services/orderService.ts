@@ -117,6 +117,10 @@ export interface AttendeeRow {
   totalAmount: number
   paidAt: string
   registeredAt: string
+  // Registration mode — PENDING backend (see attendee-registration-mode request).
+  // Expected: 'self' | 'someone_else'; purchaser = who paid, when on someone's behalf.
+  registrationType?: string
+  purchaser?: { firstName?: string; lastName?: string; email?: string; phone?: string }
 }
 
 export interface TicketListPagination {
@@ -170,31 +174,52 @@ export async function getMealTickets(
   }
 }
 
-// ── Other ticket endpoints — keep limit=500 (accommodation/transport lists
-//    are much smaller documents and haven't hit the BSON limit) ───────────────
+// ── Accommodation / transport / attendee lists ──────────────────────────────────
+// These list endpoints cap `limit` at 100. The pages do client-side search/pagination
+// over the full list, so we page through at limit=100 and concatenate every row.
+const TICKET_PAGE_LIMIT = 100
+
+async function fetchAllTicketPages<T>(
+  makePath: (page: number, limit: number) => string
+): Promise<{ list: T[]; pagination: TicketListPagination }> {
+  const first = await api.get(makePath(1, TICKET_PAGE_LIMIT))
+  const inner = first.data?.data ?? {}
+  const firstList: T[] = Array.isArray(inner.list) ? inner.list : []
+  const pg: TicketListPagination =
+    inner.pagination ?? { total: firstList.length, page: 1, limit: TICKET_PAGE_LIMIT, pages: 1 }
+  const pages = pg.pages ?? 1
+
+  if (pages <= 1) {
+    return { list: firstList, pagination: { ...pg, total: pg.total ?? firstList.length } }
+  }
+
+  // Fetch the remaining pages (2..pages) in parallel and concatenate.
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) => api.get(makePath(i + 2, TICKET_PAGE_LIMIT)))
+  )
+  const list = [
+    ...firstList,
+    ...rest.flatMap((r) => (Array.isArray(r.data?.data?.list) ? r.data.data.list : [])),
+  ]
+  return { list, pagination: { total: pg.total ?? list.length, page: 1, limit: TICKET_PAGE_LIMIT, pages } }
+}
 
 export async function getAccommodationTickets(eventId: string): Promise<{ list: AccommodationTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/accommodations?limit=500`)
-  return {
-    list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 500, pages: 1 },
-  }
+  return fetchAllTicketPages<AccommodationTicketRow>(
+    (page, limit) => `/orders/${eventId}/accommodations?page=${page}&limit=${limit}`
+  )
 }
 
 export async function getTransportTickets(eventId: string): Promise<{ list: TransportTicketRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/transports?limit=500`)
-  return {
-    list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 500, pages: 1 },
-  }
+  return fetchAllTicketPages<TransportTicketRow>(
+    (page, limit) => `/orders/${eventId}/transports?page=${page}&limit=${limit}`
+  )
 }
 
 export async function getAttendees(eventId: string): Promise<{ list: AttendeeRow[]; pagination: TicketListPagination }> {
-  const { data } = await api.get(`/orders/${eventId}/attendees?limit=500`)
-  return {
-    list: data?.data?.list ?? [],
-    pagination: data?.data?.pagination ?? { total: 0, page: 1, limit: 500, pages: 1 },
-  }
+  return fetchAllTicketPages<AttendeeRow>(
+    (page, limit) => `/orders/${eventId}/attendees?page=${page}&limit=${limit}`
+  )
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

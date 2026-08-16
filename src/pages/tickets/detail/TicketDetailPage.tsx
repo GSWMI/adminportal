@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Pencil, Calendar, MapPin, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
-import { getEventById, updateEvent, updateRegistration, type EventData } from '../../../services/eventService'
+import { getEventById, updateEvent, updateRegistration, getEventAccommodations, type EventData, type AccommodationData } from '../../../services/eventService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
-const SECTIONS = ['Event info', 'Ticket type', 'Options, prices & quantity limit', 'Registration form', 'Registration']
+const SECTIONS = ['Event info', 'Ticket type', 'Options, prices & quantity limit', 'Registration form', 'Sponsorship pricing', 'Registration']
 
 function formatDate(s: string) {
   if (!s) return ''
@@ -85,7 +85,7 @@ function EventInfoSection({ event, editing, onEdit, onSave }: {
 }
 
 // ── Ticket Type Section ──
-function TicketTypeSection({ event, editing, onEdit, onSave: _onSave }: {
+function TicketTypeSection({ event, editing, onEdit }: {
   event: EventData
   editing: boolean
   onEdit: () => void
@@ -326,6 +326,104 @@ function SaveBtn({ dirty, saving, onSave }: { dirty: boolean; saving: boolean; o
   )
 }
 
+// ── Sponsorship Pricing Section ──
+function PriceField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="mb-3">
+      <label className="block text-[13px] font-medium text-gray-700 mb-1.5">{label}</label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[14px]">₦</span>
+        <input
+          type="number"
+          min="0"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="0"
+          className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-[14px] outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 transition-all"
+        />
+      </div>
+    </div>
+  )
+}
+
+function SponsorshipPricingSection({ event, onSave }: {
+  event: EventData
+  onSave: (data: Partial<EventData>) => Promise<void>
+}) {
+  const sup = event.sponsorshipUnitPrices
+  const [accommodations, setAccommodations] = useState<AccommodationData[]>([])
+  const [loadingAcc, setLoadingAcc] = useState(true)
+  // Prefill from the event's saved sponsorship prices (GET now returns them).
+  const [meal, setMeal] = useState(sup?.meal != null ? String(sup.meal) : '')
+  const [transport, setTransport] = useState(sup?.transport != null ? String(sup.transport) : '')
+  const [accPrices, setAccPrices] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    for (const a of sup?.accommodation ?? []) init[a.accommodationId] = String(a.pricePerPerson)
+    return init
+  })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    getEventAccommodations(event._id)
+      .then(setAccommodations)
+      .catch(() => { /* leave empty */ })
+      .finally(() => setLoadingAcc(false))
+  }, [event._id])
+
+  const accId = (a: AccommodationData) => (a.id ?? a._id) as string
+
+  const accommodationsPriced =
+    accommodations.length === 0 || accommodations.every((a) => Number(accPrices[accId(a)]) > 0)
+  const valid = Number(meal) > 0 && Number(transport) > 0 && accommodationsPriced
+
+  const handleSave = async () => {
+    setSaving(true)
+    await onSave({
+      sponsorshipUnitPrices: {
+        meal: Number(meal),
+        transport: Number(transport),
+        accommodation: accommodations.map((a) => ({
+          accommodationId: accId(a),
+          pricePerPerson: Number(accPrices[accId(a)]),
+        })),
+      },
+    })
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <h2 className="text-[15px] font-semibold text-[#3b5bdb] mb-1">Sponsorship pricing</h2>
+      <p className="text-[12px] text-gray-500 mb-5">
+        Set the per-person amount a sponsor pays for each category. This must be set before attendees can sponsor others.
+      </p>
+
+      <PriceField label="Meal (per person)" value={meal} onChange={setMeal} />
+      <PriceField label="Transport (per person)" value={transport} onChange={setTransport} />
+
+      <p className="text-[13px] font-semibold text-gray-800 mt-5 mb-2">Accommodation (price per person)</p>
+      {loadingAcc ? (
+        <Skeleton count={2} height={44} className="mb-2" />
+      ) : accommodations.length === 0 ? (
+        <p className="text-[12px] text-gray-400 mb-2">This event has no accommodations to price.</p>
+      ) : (
+        accommodations.map((a) => (
+          <PriceField
+            key={accId(a)}
+            label={a.name}
+            value={accPrices[accId(a)] ?? ''}
+            onChange={(v) => setAccPrices((p) => ({ ...p, [accId(a)]: v }))}
+          />
+        ))
+      )}
+
+      <div className="mt-5">
+        <SaveBtn dirty={valid} saving={saving} onSave={handleSave} />
+      </div>
+    </div>
+  )
+}
+
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -448,6 +546,12 @@ export default function TicketDetailPage() {
               />
             )}
             {activeSection === 4 && (
+              <SponsorshipPricingSection
+                event={event}
+                onSave={handleSave}
+              />
+            )}
+            {activeSection === 5 && (
               <RegistrationSection
                 event={event}
                 onUpdate={handleRegistrationUpdate}
