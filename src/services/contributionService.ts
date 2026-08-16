@@ -52,11 +52,14 @@ export interface Donation {
 
 // ── Sponsorships ────────────────────────────────────────────────────────────────
 
-export async function getSponsorships(eventId: string): Promise<Sponsorship[]> {
-  const { data } = await api.get(`/sponsorships?eventId=${eventId}`)
+// Omit eventId to fetch across all events (e.g. the "All events" view).
+export async function getSponsorships(eventId?: string): Promise<Sponsorship[]> {
+  const params = new URLSearchParams({ limit: '100' })
+  if (eventId) params.set('eventId', eventId)
+  const { data } = await api.get(`/sponsorships?${params.toString()}`)
   const list = data?.data?.sponsorships ?? data?.data ?? data?.sponsorships ?? []
   const arr: Sponsorship[] = Array.isArray(list) ? list : []
-  // The list endpoint may return all events; filter client-side to be safe.
+  // The list endpoint may ignore eventId; filter client-side when one is given.
   return eventId ? arr.filter((s) => s.eventId === eventId) : arr
 }
 
@@ -87,10 +90,14 @@ export async function downloadSponsorshipTicket(id: string, reference?: string):
 
 // ── Donations ───────────────────────────────────────────────────────────────────
 
-export async function getDonations(eventId: string): Promise<Donation[]> {
-  const { data } = await api.get(`/donations/?eventId=${eventId}`)
+// Omit eventId to fetch across all events (e.g. the "All events" view).
+export async function getDonations(eventId?: string): Promise<Donation[]> {
+  const params = new URLSearchParams({ limit: '100' })
+  if (eventId) params.set('eventId', eventId)
+  const { data } = await api.get(`/donations/?${params.toString()}`)
   const list = data?.data?.donations ?? data?.donations ?? []
-  return Array.isArray(list) ? list : []
+  const arr: Donation[] = Array.isArray(list) ? list : []
+  return eventId ? arr.filter((d) => d.eventId === eventId) : arr
 }
 
 export async function getDonationById(id: string): Promise<Donation> {

@@ -57,6 +57,11 @@ export interface EventData {
   customQuestions?: CustomQuestion[]
   consentText?: string
   whatsappLink?: string
+  sponsorshipUnitPrices?: {
+    meal: number
+    transport: number
+    accommodation: { accommodationId: string; pricePerPerson: number }[]
+  }
   registrationOpen: boolean
   mealRegistrationOpen: boolean
   accommodationRegistrationOpen: boolean

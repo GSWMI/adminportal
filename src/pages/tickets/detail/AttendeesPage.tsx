@@ -20,11 +20,28 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// Registration mode: 'self' | 'someone_else'.
+// Backend returns `purchaser` only when someone pays on another's behalf; confirm by
+// comparing guest vs purchaser email (per backend). Also honors an explicit registrationType.
+function getRegistrationMode(r: AttendeeRow): 'self' | 'someone_else' {
+  const t = (r.registrationType ?? '').toLowerCase()
+  if (t) return t.includes('self') || t === 'myself' || t === 'me' ? 'self' : 'someone_else'
+  const pEmail = r.purchaser?.email?.toLowerCase()
+  const gEmail = r.guest?.email?.toLowerCase()
+  return pEmail && gEmail && pEmail !== gEmail ? 'someone_else' : 'self'
+}
+
+function purchaserName(r: AttendeeRow): string {
+  if (!r.purchaser) return ''
+  return `${r.purchaser.firstName ?? ''} ${r.purchaser.lastName ?? ''}`.trim()
+}
+
 export default function AttendeesPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [ticketFilter, setTicketFilter] = useState<string>('all')
+  const [modeFilter, setModeFilter] = useState<string>('all')
   const [list, setList] = useState<AttendeeRow[]>([])
   const [eventName, setEventName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -47,17 +64,23 @@ export default function AttendeesPage() {
     fetchData()
   }, [id])
 
+  // Show the registration-mode column + filter only once the data carries it
+  // (i.e. the backend returns a purchaser/registrationType on at least one row).
+  const hasModeData = list.some((r) => !!r.registrationType || !!r.purchaser)
+
   const filtered = list.filter((r) => {
     const matchSearch = !search ||
       `${r.guest.firstName} ${r.guest.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
       r.guest.email.toLowerCase().includes(search.toLowerCase()) ||
       r.orderNumber.toLowerCase().includes(search.toLowerCase())
     if (!matchSearch) return false
-    if (ticketFilter === 'all') return true
-    return r.ticketTypes.map((t) => t.toLowerCase()).includes(ticketFilter)
+    const matchTicket = ticketFilter === 'all' || r.ticketTypes.map((t) => t.toLowerCase()).includes(ticketFilter)
+    if (!matchTicket) return false
+    return modeFilter === 'all' || getRegistrationMode(r) === modeFilter
   })
 
   const { page, setPage, totalPages, total, paged } = usePagination(filtered, 20)
+  const colCount = hasModeData ? 7 : 6
 
   const handleToggleRegistration = async () => {
     if (!id) return
@@ -112,11 +135,19 @@ export default function AttendeesPage() {
           </div>
           <select value={ticketFilter} onChange={(e) => { setTicketFilter(e.target.value); setPage(1) }}
             className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 outline-none focus:border-[#3b5bdb] bg-white">
-            <option value="all">All ticket types</option>
-            <option value="meal">Meal only</option>
-            <option value="accommodation">Accommodation only</option>
-            <option value="transport">Transport only</option>
+            <option value="all">All categories</option>
+            <option value="meal">Meal</option>
+            <option value="accommodation">Accommodation</option>
+            <option value="transport">Transport</option>
           </select>
+          {hasModeData && (
+            <select value={modeFilter} onChange={(e) => { setModeFilter(e.target.value); setPage(1) }}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 outline-none focus:border-[#3b5bdb] bg-white">
+              <option value="all">All registrations</option>
+              <option value="self">Registered self</option>
+              <option value="someone_else">On behalf</option>
+            </select>
+          )}
         </div>
 
         {/* Total count */}
@@ -129,7 +160,7 @@ export default function AttendeesPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100">
-              {['Name', 'Phone', 'Gender', 'Next of kin', 'Tickets', 'Total (₦)'].map((h) => (
+              {['Name', 'Phone', 'Gender', 'Next of kin', ...(hasModeData ? ['Registered by'] : []), 'Tickets', 'Total (₦)'].map((h) => (
                 <th key={h} className="px-5 py-3 text-left text-[12px] font-medium text-gray-500 whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -137,13 +168,13 @@ export default function AttendeesPage() {
           <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 6 }).map((_, j) => (
+                <tr key={i}>{Array.from({ length: colCount }).map((_, j) => (
                   <td key={j} className="px-5 py-3.5"><Skeleton height={14} /></td>
                 ))}</tr>
               ))
             ) : paged.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center text-[13px] text-gray-400">
+                <td colSpan={colCount} className="px-5 py-12 text-center text-[13px] text-gray-400">
                   {search ? 'No attendees match your search' : 'No attendees for this event yet'}
                 </td>
               </tr>
@@ -168,6 +199,26 @@ export default function AttendeesPage() {
                       </div>
                     ) : <span className="text-[13px] text-gray-400">—</span>}
                   </td>
+                  {hasModeData && (
+                    <td className="px-5 py-3.5">
+                      {(() => {
+                        const mode = getRegistrationMode(row)
+                        if (mode === 'someone_else') {
+                          const by = purchaserName(row)
+                          return (
+                            <div>
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-50 text-purple-600 border border-purple-200">On behalf</span>
+                              {by && <p className="text-[11px] text-gray-400 mt-1">by {by}</p>}
+                            </div>
+                          )
+                        }
+                        if (mode === 'self') {
+                          return <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-200">Self</span>
+                        }
+                        return <span className="text-[13px] text-gray-400">—</span>
+                      })()}
+                    </td>
+                  )}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {row.ticketTypes.map((t) => (

@@ -117,6 +117,10 @@ export interface AttendeeRow {
   totalAmount: number
   paidAt: string
   registeredAt: string
+  // Registration mode — PENDING backend (see attendee-registration-mode request).
+  // Expected: 'self' | 'someone_else'; purchaser = who paid, when on someone's behalf.
+  registrationType?: string
+  purchaser?: { firstName?: string; lastName?: string; email?: string; phone?: string }
 }
 
 export interface TicketListPagination {

@@ -23,24 +23,20 @@ export default function ContributionsPage() {
   const [donations, setDonations] = useState<Donation[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Populate the event filter; the page defaults to "All events" (selectedEvent = '').
   useEffect(() => {
-    getAllEvents()
-      .then((evs) => {
-        setEvents(evs)
-        if (evs.length > 0) setSelectedEvent((prev) => prev || evs[0]._id)
-        else setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    getAllEvents().then(setEvents).catch(() => { /* dropdown just stays at All events */ })
   }, [])
 
   useEffect(() => {
-    if (!selectedEvent) return
     let cancelled = false
     async function fetchData() {
       setLoading(true)
+      // Empty selectedEvent → fetch across all events.
+      const eventId = selectedEvent || undefined
       const [spRes, dnRes] = await Promise.allSettled([
-        getSponsorships(selectedEvent),
-        getDonations(selectedEvent),
+        getSponsorships(eventId),
+        getDonations(eventId),
       ])
       if (cancelled) return
       setSponsorships(spRes.status === 'fulfilled' ? spRes.value : [])
@@ -80,7 +76,7 @@ export default function ContributionsPage() {
           onChange={(e) => { setSelectedEvent(e.target.value); setSearch('') }}
           className="py-2 px-3 border border-gray-200 rounded-lg text-[13px] text-gray-700 bg-white focus:outline-none focus:border-[#3b5bdb] max-w-[260px]"
         >
-          {events.length === 0 && <option value="">No events</option>}
+          <option value="">All events</option>
           {events.map((ev) => <option key={ev._id} value={ev._id}>{ev.name}</option>)}
         </select>
       </div>
