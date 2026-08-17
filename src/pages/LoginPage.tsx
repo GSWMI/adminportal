@@ -52,6 +52,7 @@ export default function LoginPage() {
 
           <form onSubmit={formik.handleSubmit} className="flex flex-col gap-5">
             {/* Email */}
+            
             <div className="flex flex-col gap-1.5">
               <label className="text-[14px] font-medium text-gray-700">Email</label>
               <div className="relative">
