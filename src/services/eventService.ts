@@ -212,58 +212,22 @@ export interface ActivityLogItem {
   updatedAt?: string
 }
 
-async function fetchLogsByEntity(
-  entity: string,
-  params: { action?: string; page?: number; limit?: number }
-): Promise<{ logs: ActivityLogItem[]; pagination: { page: number; pages: number; total: number } }> {
-  const query = new URLSearchParams({ entity })
-  if (params.action) query.set('action', params.action)
-  if (params.page) query.set('page', String(params.page))
-  if (params.limit) query.set('limit', String(params.limit))
-  const { data } = await api.get(`/events/admin/activity?${query.toString()}`)
-  return {
-    logs: data?.data?.logs ?? data?.data ?? data?.logs ?? [],
-    pagination: data?.data?.pagination ?? data?.pagination ?? { page: 1, pages: 1, total: 0 },
-  }
-}
-
+// `entity` is optional — omitting it returns logs across ALL entity types
+// (event, order, user, sponsorship, donation), server-paginated.
 export async function getActivityLog(params?: {
   entity?: string
   action?: string
   page?: number
   limit?: number
 }): Promise<{ logs: ActivityLogItem[]; pagination: { page: number; pages: number; total: number } }> {
-  const limit = params?.limit ?? 10
-
-  // If a specific entity is requested, fetch just that one
-  if (params?.entity) {
-    return fetchLogsByEntity(params.entity, { action: params.action, page: params.page, limit })
-  }
-
-  // Otherwise fetch all entity types and merge, sorted by newest first
-  const entities = ['event', 'order', 'user']
-  const results = await Promise.allSettled(
-    entities.map((e) => fetchLogsByEntity(e, { limit: 50 }))
-  )
-
-  const allLogs: ActivityLogItem[] = []
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      allLogs.push(...result.value.logs)
-    }
-  }
-
-  // Sort by createdAt descending
-  allLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-  // Apply pagination manually
-  const page = params?.page ?? 1
-  const start = (page - 1) * limit
-  const paged = allLogs.slice(start, start + limit)
-  const totalPages = Math.ceil(allLogs.length / limit)
-
+  const query = new URLSearchParams()
+  if (params?.entity) query.set('entity', params.entity)
+  if (params?.action) query.set('action', params.action)
+  query.set('page', String(params?.page ?? 1))
+  query.set('limit', String(params?.limit ?? 10))
+  const { data } = await api.get(`/events/admin/activity?${query.toString()}`)
   return {
-    logs: paged,
-    pagination: { page, pages: totalPages, total: allLogs.length },
+    logs: data?.data?.logs ?? data?.data ?? data?.logs ?? [],
+    pagination: data?.data?.pagination ?? data?.pagination ?? { page: 1, pages: 1, total: 0 },
   }
 }

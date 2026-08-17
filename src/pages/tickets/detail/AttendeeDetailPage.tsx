@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Mail, Phone, User, Users, Loader2, Download } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, MessageCircle, User, Users, Loader2, Download } from 'lucide-react'
 import { resendTicket, mapPaymentStatus, type OrderData } from '../../../services/orderService'
 import { getEventById, type EventData } from '../../../services/eventService'
 import { toast } from 'sonner'
@@ -245,6 +245,14 @@ export default function AttendeeDetailPage() {
                 {order.guest.phone}
               </span>
             } />
+            {order.guest.whatsappNumber && (
+              <InfoRow label="WhatsApp" value={
+                <span className="flex items-center gap-1.5">
+                  <MessageCircle size={13} className="text-green-500" />
+                  {order.guest.whatsappNumber}
+                </span>
+              } />
+            )}
             <InfoRow label="Gender" value={capitalize(order.guest.gender ?? '')} />
           </div>
         </div>
@@ -273,6 +281,14 @@ export default function AttendeeDetailPage() {
                   <span className="flex items-center gap-1.5">
                     <Phone size={13} className="text-gray-400" />
                     {order.guest.nextOfKin.phone}
+                  </span>
+                } />
+              )}
+              {order.guest.nextOfKin.whatsappNumber && (
+                <InfoRow label="WhatsApp" value={
+                  <span className="flex items-center gap-1.5">
+                    <MessageCircle size={13} className="text-green-500" />
+                    {order.guest.nextOfKin.whatsappNumber}
                   </span>
                 } />
               )}

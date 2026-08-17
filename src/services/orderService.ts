@@ -34,8 +34,9 @@ export interface OrderGuest {
   lastName: string
   email: string
   phone: string
+  whatsappNumber?: string
   gender?: string
-  nextOfKin?: { fullName: string; email: string; phone?: string }
+  nextOfKin?: { fullName: string; email: string; phone?: string; whatsappNumber?: string }
 }
 
 export interface OrderData {

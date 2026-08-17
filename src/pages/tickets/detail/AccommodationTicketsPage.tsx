@@ -96,11 +96,14 @@ export default function AccommodationTicketsPage() {
           <p className="text-[13px] font-semibold text-gray-800 mb-2">Room availability</p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {accommodations.map((acc) => {
-              const total = acc.totalCapacity ?? acc.capacity ?? 0
-              const remaining = acc.remainingCapacity ?? total
-              const booked = Math.max(0, total - remaining)
-              const pct = total > 0 ? Math.min(100, Math.round((booked / total) * 100)) : 0
-              const full = total > 0 && remaining <= 0
+              // Total capacity may be absent from the response; only show "of Y" + the
+              // bar when we actually have a positive total. Otherwise show remaining only.
+              const total = acc.totalCapacity ?? acc.capacity
+              const hasTotal = typeof total === 'number' && total > 0
+              const remaining = acc.remainingCapacity ?? (hasTotal ? total : 0)
+              const booked = hasTotal ? Math.max(0, (total as number) - remaining) : 0
+              const pct = hasTotal ? Math.min(100, Math.round((booked / (total as number)) * 100)) : 0
+              const full = hasTotal && remaining <= 0
               return (
                 <div key={acc.id ?? acc._id ?? acc.name} className="bg-white rounded-xl border border-gray-200 p-4">
                   <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -112,11 +115,14 @@ export default function AccommodationTicketsPage() {
                     )}
                   </div>
                   <p className="text-[12px] text-gray-500 mb-2">
-                    <span className="font-semibold text-gray-800">{remaining}</span> of {total} spots remaining
+                    <span className="font-semibold text-gray-800">{remaining}</span>
+                    {hasTotal ? ` of ${total} spots remaining` : ' spots remaining'}
                   </p>
-                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${full ? 'bg-red-400' : 'bg-[#3b5bdb]'}`} style={{ width: `${pct}%` }} />
-                  </div>
+                  {hasTotal && (
+                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${full ? 'bg-red-400' : 'bg-[#3b5bdb]'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  )}
                 </div>
               )
             })}
