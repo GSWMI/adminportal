@@ -172,7 +172,11 @@ export async function getEventTransport(eventId: string): Promise<TransportData[
   const { data } = await api.get(`/events/${eventId}/transports`)
   const inner = data?.data ?? data
   if (Array.isArray(inner)) return inner
+  if (Array.isArray(inner?.transports)) return inner.transports
   if (Array.isArray(inner?.transport)) return inner.transport
+  // Endpoint may return a single object under `transport`/`transports`.
+  if (inner?.transports && typeof inner.transports === 'object') return [inner.transports]
+  if (inner?.transport && typeof inner.transport === 'object') return [inner.transport]
   return []
 }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Pencil, Calendar, MapPin, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
-import { getEventById, updateEvent, updateRegistration, getEventAccommodations, type EventData, type AccommodationData } from '../../../services/eventService'
+import { getEventById, updateEvent, updateRegistration, getEventAccommodations, getEventTransport, updateAccommodation, updateTransportById, type EventData, type AccommodationData, type TransportData } from '../../../services/eventService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -91,10 +91,22 @@ function TicketTypeSection({ event, editing, onEdit }: {
   onEdit: () => void
   onSave?: (data: Partial<EventData>) => Promise<void>
 }) {
-  const ticketType = event.mealRegistrationOpen ? 'Meal'
-    : event.accommodationRegistrationOpen ? 'Accommodation'
-    : event.transportRegistrationOpen ? 'Transport'
-    : 'Meal'
+  // An event can offer multiple ticket types — show every enabled one, not just the first.
+  const ticketTypes: string[] = []
+  if (event.mealRegistrationOpen || (event.mealOptions?.length ?? 0) > 0) ticketTypes.push('Meal')
+  if (event.accommodationRegistrationOpen) ticketTypes.push('Accommodation')
+  if (event.transportRegistrationOpen) ticketTypes.push('Transport')
+  if (ticketTypes.length === 0) ticketTypes.push('Meal')
+
+  const badges = (
+    <div className="flex items-center gap-2 flex-wrap">
+      {ticketTypes.map((t) => (
+        <span key={t} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-[13px] font-medium">
+          {t} ticket
+        </span>
+      ))}
+    </div>
+  )
 
   if (!editing) {
     return (
@@ -103,9 +115,7 @@ function TicketTypeSection({ event, editing, onEdit }: {
           <h2 className="text-[15px] font-semibold text-[#3b5bdb]">Ticket type</h2>
           <button onClick={onEdit} className="text-gray-400 hover:text-gray-600 transition-colors"><Pencil size={15} /></button>
         </div>
-        <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-[13px] font-medium">
-          {ticketType} ticket
-        </span>
+        {badges}
       </div>
     )
   }
@@ -113,9 +123,7 @@ function TicketTypeSection({ event, editing, onEdit }: {
   return (
     <div>
       <h2 className="text-[15px] font-semibold text-[#3b5bdb] mb-4">Ticket type</h2>
-      <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-[13px] font-medium">
-        {ticketType} ticket
-      </span>
+      {badges}
       <p className="text-[12px] text-gray-400 mt-3">
         Ticket type changes require backend support. Contact your developer.
       </p>
@@ -134,6 +142,17 @@ function OptionsSection({ event, editing, onEdit, onSave }: {
   const [prices, setPrices] = useState({ breakfast: event.mealPrices?.breakfast ?? 0, lunch: event.mealPrices?.lunch ?? 0, dinner: event.mealPrices?.dinner ?? 0 })
   const [saving, setSaving] = useState(false)
   const dirty = JSON.stringify(prices) !== JSON.stringify(event.mealPrices)
+
+  // Accommodation & transport live on their own endpoints — fetch them for display.
+  const [accommodations, setAccommodations] = useState<AccommodationData[]>([])
+  const [transports, setTransports] = useState<TransportData[]>([])
+  const [loadingExtras, setLoadingExtras] = useState(true)
+  useEffect(() => {
+    Promise.allSettled([
+      getEventAccommodations(event._id).then(setAccommodations).catch(() => {}),
+      getEventTransport(event._id).then(setTransports).catch(() => {}),
+    ]).finally(() => setLoadingExtras(false))
+  }, [event._id])
 
   const toggleSlot = (slot: string) =>
     setOpenSlots((p) => p.includes(slot) ? p.filter((s) => s !== slot) : [...p, slot])
@@ -194,6 +213,194 @@ function OptionsSection({ event, editing, onEdit, onSave }: {
       ))}
 
       {editing && <SaveBtn dirty={dirty} saving={saving} onSave={handleSave} />}
+
+      {loadingExtras && (
+        <p className="text-[12px] text-gray-400 mt-5 flex items-center gap-2">
+          <Loader2 size={13} className="animate-spin" /> Loading accommodation &amp; transport…
+        </p>
+      )}
+
+      {/* Accommodation */}
+      {accommodations.length > 0 && (
+        <div className="mt-6">
+          <p className="text-[13px] font-semibold text-gray-800 mb-2">Accommodation</p>
+          <div className="flex flex-col gap-2">
+            {accommodations.map((a) => (
+              <EditableAccommodationCard
+                key={a.id ?? a._id ?? a.name}
+                acc={a}
+                editing={editing}
+                onUpdated={(u) => setAccommodations((prev) => prev.map((x) => ((x.id ?? x._id) === (u.id ?? u._id) ? u : x)))}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Transport */}
+      {transports.length > 0 && (
+        <div className="mt-6">
+          <p className="text-[13px] font-semibold text-gray-800 mb-2">Transport</p>
+          <div className="flex flex-col gap-2">
+            {transports.map((t) => (
+              <EditableTransportCard
+                key={t._id ?? t.name}
+                item={t}
+                editing={editing}
+                onUpdated={(u) => setTransports((prev) => prev.map((x) => (x._id === u._id ? u : x)))}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Editable accommodation / transport cards (used inside OptionsSection) ──
+function MiniField({ label, value, onChange, type = 'text', prefix }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; prefix?: string
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-[11px] font-medium text-gray-500">{label}</label>
+      <div className="relative">
+        {prefix && <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-gray-400">{prefix}</span>}
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`w-full ${prefix ? 'pl-6' : 'pl-2.5'} pr-2 py-1.5 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#3b5bdb] transition-all`}
+        />
+      </div>
+    </div>
+  )
+}
+
+function EditableAccommodationCard({ acc, editing, onUpdated }: {
+  acc: AccommodationData; editing: boolean; onUpdated: (a: AccommodationData) => void
+}) {
+  const cap0 = acc.totalCapacity ?? acc.capacity
+  const [name, setName] = useState(acc.name)
+  const [price, setPrice] = useState(String(acc.price ?? ''))
+  const [ppr, setPpr] = useState(acc.peoplePerRoom != null ? String(acc.peoplePerRoom) : '')
+  const [capacity, setCapacity] = useState(cap0 != null ? String(cap0) : '')
+  const [saving, setSaving] = useState(false)
+
+  const dirty =
+    name !== acc.name ||
+    Number(price) !== (acc.price ?? 0) ||
+    (acc.peoplePerRoom != null ? Number(ppr) !== acc.peoplePerRoom : ppr.trim() !== '') ||
+    (cap0 != null ? Number(capacity) !== cap0 : capacity.trim() !== '')
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const capNum = capacity.trim() ? Number(capacity) : cap0
+      const payload: Record<string, unknown> = {
+        name,
+        description: acc.description ?? '',
+        price: Number(price) || 0,
+        peoplePerRoom: Number(ppr) || 0,
+        available: acc.available ?? true,
+        amenities: acc.amenities ?? [],
+        eventId: acc.eventId,
+      }
+      if (typeof capNum === 'number') payload.capacity = capNum
+      await updateAccommodation((acc.id ?? acc._id) as string, payload)
+      onUpdated({
+        ...acc, name, price: Number(price) || 0, peoplePerRoom: Number(ppr) || 0,
+        capacity: (capNum ?? acc.capacity) as number, totalCapacity: capNum ?? acc.totalCapacity,
+      })
+      toast.success('Accommodation updated')
+    } catch {
+      toast.error('Failed to update accommodation')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    const cap = acc.totalCapacity ?? acc.capacity
+    return (
+      <div className="border border-gray-200 rounded-lg px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[13px] font-medium text-gray-900">{acc.name}</span>
+          <span className="text-[13px] text-gray-700 whitespace-nowrap">₦{(acc.price ?? 0).toLocaleString()}</span>
+        </div>
+        <p className="text-[12px] text-gray-500 mt-0.5">
+          {acc.peoplePerRoom ? `${acc.peoplePerRoom} per room` : ''}
+          {typeof cap === 'number' ? `${acc.peoplePerRoom ? ' · ' : ''}Capacity ${cap}` : ''}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg px-4 py-3 flex flex-col gap-2.5">
+      <MiniField label="Name" value={name} onChange={setName} />
+      <div className="grid grid-cols-3 gap-2">
+        <MiniField label="Price" value={price} onChange={setPrice} type="number" prefix="₦" />
+        <MiniField label="Per room" value={ppr} onChange={setPpr} type="number" />
+        <MiniField label="Capacity" value={capacity} onChange={setCapacity} type="number" />
+      </div>
+      <div><SaveBtn dirty={dirty} saving={saving} onSave={handleSave} /></div>
+    </div>
+  )
+}
+
+function EditableTransportCard({ item, editing, onUpdated }: {
+  item: TransportData; editing: boolean; onUpdated: (t: TransportData) => void
+}) {
+  const [name, setName] = useState(item.name)
+  const [price, setPrice] = useState(String(item.price ?? ''))
+  const [pickup, setPickup] = useState(item.pickupLocation ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const dirty = name !== item.name || Number(price) !== (item.price ?? 0) || pickup !== (item.pickupLocation ?? '')
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const payload = {
+        name,
+        description: item.description ?? '',
+        price: Number(price) || 0,
+        available: item.available ?? true,
+        pickupLocation: pickup,
+        dropoffLocation: item.dropoffLocation ?? 'Conference Venue',
+        eventId: item.eventId,
+      }
+      await updateTransportById(item._id, payload)
+      onUpdated({ ...item, name, price: Number(price) || 0, pickupLocation: pickup })
+      toast.success('Transport updated')
+    } catch {
+      toast.error('Failed to update transport')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className="border border-gray-200 rounded-lg px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[13px] font-medium text-gray-900">{item.name}</span>
+          <span className="text-[13px] text-gray-700 whitespace-nowrap">₦{(item.price ?? 0).toLocaleString()}</span>
+        </div>
+        {item.pickupLocation && <p className="text-[12px] text-gray-500 mt-0.5">Pickup: {item.pickupLocation}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg px-4 py-3 flex flex-col gap-2.5">
+      <MiniField label="Name" value={name} onChange={setName} />
+      <div className="grid grid-cols-2 gap-2">
+        <MiniField label="Price" value={price} onChange={setPrice} type="number" prefix="₦" />
+        <MiniField label="Pickup location" value={pickup} onChange={setPickup} />
+      </div>
+      <div><SaveBtn dirty={dirty} saving={saving} onSave={handleSave} /></div>
     </div>
   )
 }
