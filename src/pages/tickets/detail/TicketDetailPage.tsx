@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil, Calendar, MapPin, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { getEventById, updateEvent, updateRegistration, getEventAccommodations, getEventTransport, updateAccommodation, updateTransportById, type EventData, type AccommodationData, type TransportData } from '../../../services/eventService'
+import { qk } from '../../../lib/queryKeys'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -634,35 +636,28 @@ function SponsorshipPricingSection({ event, onSave }: {
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [activeSection, setActiveSection] = useState(0)
   const [editingSection, setEditingSection] = useState<number | null>(null)
-  const [event, setEvent] = useState<EventData | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!id) return
-    async function fetchEvent() {
-      try {
-        const data = await getEventById(id!)
-        setEvent(data)
-      } catch {
-        toast.error('Failed to load ticket details')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchEvent()
-  }, [id])
+  const eventQuery = useQuery({
+    queryKey: qk.event(id ?? ''),
+    queryFn: () => getEventById(id!),
+    enabled: !!id,
+  })
+  const event = eventQuery.data ?? null
+  const loading = eventQuery.isLoading
 
   const handleRegistrationUpdate = (updates: Partial<EventData>) => {
-    setEvent((prev) => prev ? { ...prev, ...updates } : prev)
+    if (!id) return
+    queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? { ...prev, ...updates } : prev)
   }
 
   const handleSave = async (updates: Partial<EventData>) => {
-    if (!event || !id) return
+    if (!id) return
     try {
       const updated = await updateEvent(id, updates)
-      setEvent((prev) => prev ? { ...prev, ...updated, ...updates } : prev)
+      queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? { ...prev, ...updated, ...updates } : prev)
       setEditingSection(null)
       toast.success('Changes saved')
     } catch {

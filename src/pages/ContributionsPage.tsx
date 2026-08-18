@@ -1,54 +1,36 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Search, ChevronRight } from 'lucide-react'
-import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
-import { getAllEvents, type EventData } from '../services/eventService'
-import {
-  getSponsorships, getDonations,
-  type Sponsorship, type Donation,
-} from '../services/contributionService'
+import { getAllEvents } from '../services/eventService'
+import { getSponsorships, getDonations, type Sponsorship, type Donation } from '../services/contributionService'
+import { qk } from '../lib/queryKeys'
 import { formatDate, money, categorySummary } from './contributions/format'
 import { PaymentStatusPill } from './contributions/parts'
 
 export default function ContributionsPage() {
   const navigate = useNavigate()
-  const [events, setEvents] = useState<EventData[]>([])
   const [selectedEvent, setSelectedEvent] = useState('')
   const [activeTab, setActiveTab] = useState<'sponsorships' | 'donations'>('sponsorships')
   const [search, setSearch] = useState('')
 
-  const [sponsorships, setSponsorships] = useState<Sponsorship[]>([])
-  const [donations, setDonations] = useState<Donation[]>([])
-  const [loading, setLoading] = useState(true)
+  // Event filter dropdown; page defaults to "All events" (selectedEvent = '').
+  const { data: events = [] } = useQuery({ queryKey: qk.events(), queryFn: getAllEvents })
 
-  // Populate the event filter; the page defaults to "All events" (selectedEvent = '').
-  useEffect(() => {
-    getAllEvents().then(setEvents).catch(() => { /* dropdown just stays at All events */ })
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    async function fetchData() {
-      setLoading(true)
-      // Empty selectedEvent → fetch across all events.
-      const eventId = selectedEvent || undefined
-      const [spRes, dnRes] = await Promise.allSettled([
-        getSponsorships(eventId),
-        getDonations(eventId),
-      ])
-      if (cancelled) return
-      setSponsorships(spRes.status === 'fulfilled' ? spRes.value : [])
-      setDonations(dnRes.status === 'fulfilled' ? dnRes.value : [])
-      if (spRes.status === 'rejected' && dnRes.status === 'rejected') {
-        toast.error('Failed to load contributions')
-      }
-      setLoading(false)
-    }
-    fetchData()
-    return () => { cancelled = true }
-  }, [selectedEvent])
+  const eventId = selectedEvent || undefined
+  const sponsorshipsQuery = useQuery({
+    queryKey: qk.sponsorships(eventId),
+    queryFn: () => getSponsorships(eventId),
+  })
+  const donationsQuery = useQuery({
+    queryKey: qk.donations(eventId),
+    queryFn: () => getDonations(eventId),
+  })
+  const sponsorships = sponsorshipsQuery.data ?? []
+  const donations = donationsQuery.data ?? []
+  const loading = sponsorshipsQuery.isLoading || donationsQuery.isLoading
 
   const filteredSponsorships = sponsorships.filter((s) => {
     if (!search) return true

@@ -1,36 +1,24 @@
-import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
-import { getDonationById, type Donation } from '../../services/contributionService'
+import { getDonationById } from '../../services/contributionService'
+import { qk } from '../../lib/queryKeys'
 import { formatDate, money } from './format'
 import { PaymentStatusPill, Card, Row } from './parts'
 
 export default function DonationDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [donation, setDonation] = useState<Donation | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!id) return
-    let cancelled = false
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const d = await getDonationById(id!)
-        if (!cancelled) setDonation(d)
-      } catch {
-        if (!cancelled) toast.error('Failed to load donation')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    fetchData()
-    return () => { cancelled = true }
-  }, [id])
+  const donationQuery = useQuery({
+    queryKey: qk.donation(id ?? ''),
+    queryFn: () => getDonationById(id!),
+    enabled: !!id,
+  })
+  const donation = donationQuery.data ?? null
+  const loading = donationQuery.isLoading
 
   const anon = donation?.isAnonymous
 

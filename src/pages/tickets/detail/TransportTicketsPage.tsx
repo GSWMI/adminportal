@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Search, Download, Loader2 } from 'lucide-react'
-import { getTransportTickets, type TransportTicketRow } from '../../../services/orderService'
-import { updateRegistration, getEventById } from '../../../services/eventService'
+import { getTransportTickets } from '../../../services/orderService'
+import { updateRegistration, getEventById, type EventData } from '../../../services/eventService'
+import { qk } from '../../../lib/queryKeys'
 import { exportTransportTicketsCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -13,29 +15,26 @@ import PaginationBar from '../../../components/ui/PaginationBar'
 export default function TransportTicketsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [pickupFilter, setPickupFilter] = useState('all')
-  const [list, setList] = useState<TransportTicketRow[]>([])
-  const [eventName, setEventName] = useState('')
-  const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  const [transportRegOpen, setTransportRegOpen] = useState(true)
   const [closingReg, setClosingReg] = useState(false)
 
-  useEffect(() => {
-    if (!id) return
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const [result, eventData] = await Promise.all([getTransportTickets(id!), getEventById(id!)])
-        setList(result.list)
-        setEventName(eventData.name)
-        setTransportRegOpen(eventData.transportRegistrationOpen ?? true)
-      } catch { toast.error('Failed to load transport tickets') }
-      finally { setLoading(false) }
-    }
-    fetchData()
-  }, [id])
+  const ticketsQuery = useQuery({
+    queryKey: qk.transportTickets(id ?? ''),
+    queryFn: () => getTransportTickets(id!),
+    enabled: !!id,
+  })
+  const eventQuery = useQuery({
+    queryKey: qk.event(id ?? ''),
+    queryFn: () => getEventById(id!),
+    enabled: !!id,
+  })
+  const list = ticketsQuery.data?.list ?? []
+  const eventName = eventQuery.data?.name ?? ''
+  const transportRegOpen = eventQuery.data?.transportRegistrationOpen ?? true
+  const loading = ticketsQuery.isLoading
 
   const pickupOptions = [...new Set(list.map((r) => r.transport.pickupLocation).filter(Boolean))].sort()
 
@@ -63,10 +62,11 @@ export default function TransportTicketsPage() {
   const handleToggleReg = async () => {
     if (!id) return
     setClosingReg(true)
+    const newVal = !transportRegOpen
     try {
-      await updateRegistration(id, 'transport', !transportRegOpen)
-      setTransportRegOpen((v) => !v)
-      toast.success(`Transport registration ${!transportRegOpen ? 'opened' : 'closed'}`)
+      await updateRegistration(id, 'transport', newVal)
+      queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? { ...prev, transportRegistrationOpen: newVal } : prev)
+      toast.success(`Transport registration ${newVal ? 'opened' : 'closed'}`)
     } catch { toast.error('Failed to update registration') }
     finally { setClosingReg(false) }
   }
