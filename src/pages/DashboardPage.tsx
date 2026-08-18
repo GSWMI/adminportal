@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Ticket, UserPlus, MoreVertical, ArrowUpRight, FileText } from 'lucide-react'
 import StatusBadge from '../components/ui/StatusBadge'
 import TicketTypeBadge from '../components/ui/TicketTypeBadge'
 import InviteAdminModal from '../components/InviteAdminModal'
-import api from '../lib/axios'
-import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
-import { getAllEvents, type EventData } from '../services/eventService'
+import { getAllOrders, mapPaymentStatus, getTicketTypes } from '../services/orderService'
+import { getAllEvents, getDashboardStats } from '../services/eventService'
+import { qk } from '../lib/queryKeys'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
@@ -29,55 +30,38 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const [showAddUser, setShowAddUser] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [orders, setOrders] = useState<OrderData[]>([])
-  const [events, setEvents] = useState<EventData[]>([])
   const [selectedEvent, setSelectedEvent] = useState('') // '' = all events (cumulative)
-  const [stats, setStats] = useState<DashboardStats>({
-    ticketsCreated: 0, totalOrders: 0, totalRevenue: 0, paidOrders: 0, pendingOrders: 0,
+
+  // Event list for the filter dropdown
+  const { data: events = [] } = useQuery({ queryKey: qk.events(), queryFn: getAllEvents })
+
+  // Aggregate stats — no eventId = cumulative; with eventId = that single event.
+  const statsQuery = useQuery({
+    queryKey: qk.dashboard(selectedEvent),
+    queryFn: () => getDashboardStats(selectedEvent || undefined),
   })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  // Load the event list once for the filter dropdown
-  useEffect(() => {
-    getAllEvents().then(setEvents).catch(() => { /* dropdown just stays empty */ })
-  }, [])
+  const ordersQuery = useQuery({
+    queryKey: qk.orders({ eventId: selectedEvent || undefined }),
+    queryFn: () => getAllOrders(selectedEvent ? { eventId: selectedEvent } : undefined),
+  })
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        setError(null)
-        // Without eventId the endpoint returns the aggregate across all events;
-        // with eventId it returns stats scoped to that single event.
-        const statsParams = selectedEvent ? `?eventId=${selectedEvent}` : ''
-        const [statsRes, ordersResult] = await Promise.all([
-          api.get(`/events/admin/dashboard${statsParams}`),
-          getAllOrders(selectedEvent ? { eventId: selectedEvent } : undefined),
-        ])
+  const loading = statsQuery.isLoading || ordersQuery.isLoading
+  const error = statsQuery.isError || ordersQuery.isError ? 'Failed to load dashboard data' : null
 
-        const fetchedOrders = Array.isArray(ordersResult.orders) ? ordersResult.orders : []
-        setOrders(fetchedOrders)
+  const s = (statsQuery.data ?? {}) as unknown as {
+    totalEvents?: number; totalOrders?: number; totalRevenue?: number; paidOrders?: number; pendingOrders?: number
+  }
+  const stats: DashboardStats = {
+    // Single-event responses omit totalEvents; that view represents one event
+    ticketsCreated: s.totalEvents ?? (selectedEvent ? 1 : 0),
+    totalOrders: s.totalOrders ?? 0,
+    totalRevenue: s.totalRevenue ?? 0,
+    paidOrders: s.paidOrders ?? 0,
+    pendingOrders: s.pendingOrders ?? 0,
+  }
 
-        const inner = statsRes.data?.data ?? statsRes.data
-        setStats({
-          // Single-event responses omit totalEvents; that view represents one event
-          ticketsCreated: inner?.totalEvents ?? (selectedEvent ? 1 : 0),
-          totalOrders: inner?.totalOrders ?? 0,
-          totalRevenue: inner?.totalRevenue ?? 0,
-          paidOrders: inner?.paidOrders ?? 0,
-          pendingOrders: inner?.pendingOrders ?? 0,
-        })
-      } catch (err) {
-        console.error('Dashboard fetch error:', err)
-        setError('Failed to load dashboard data')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [selectedEvent])
-
+  const orders = Array.isArray(ordersQuery.data?.orders) ? ordersQuery.data.orders : []
   const recentOrders = orders.slice(0, 7)
   const hasOrders = orders.length > 0
 
