@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Search, Download, Loader2 } from 'lucide-react'
-import { getAccommodationTickets, type AccommodationTicketRow } from '../../../services/orderService'
-import { updateRegistration, getEventById, getEventAccommodations, type AccommodationData } from '../../../services/eventService'
+import { getAccommodationTickets } from '../../../services/orderService'
+import { updateRegistration, getEventById, getEventAccommodations, type EventData } from '../../../services/eventService'
+import { qk } from '../../../lib/queryKeys'
 import { exportAccommodationTicketsCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -13,34 +15,32 @@ import PaginationBar from '../../../components/ui/PaginationBar'
 export default function AccommodationTicketsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
-  const [list, setList] = useState<AccommodationTicketRow[]>([])
-  const [accommodations, setAccommodations] = useState<AccommodationData[]>([])
-  const [eventName, setEventName] = useState('')
-  const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  const [accRegOpen, setAccRegOpen] = useState(true)
   const [closingReg, setClosingReg] = useState(false)
 
-  useEffect(() => {
-    if (!id) return
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const [result, event, accs] = await Promise.all([
-          getAccommodationTickets(id!),
-          getEventById(id!),
-          getEventAccommodations(id!).catch(() => [] as AccommodationData[]),
-        ])
-        setList(result.list)
-        setAccommodations(accs)
-        setEventName(event.name)
-        setAccRegOpen(event.accommodationRegistrationOpen ?? true)
-      } catch { toast.error('Failed to load accommodation tickets') }
-      finally { setLoading(false) }
-    }
-    fetchData()
-  }, [id])
+  const ticketsQuery = useQuery({
+    queryKey: qk.accommodationTickets(id ?? ''),
+    queryFn: () => getAccommodationTickets(id!),
+    enabled: !!id,
+  })
+  const eventQuery = useQuery({
+    queryKey: qk.event(id ?? ''),
+    queryFn: () => getEventById(id!),
+    enabled: !!id,
+  })
+  const accommodationsQuery = useQuery({
+    queryKey: qk.eventAccommodations(id ?? ''),
+    queryFn: () => getEventAccommodations(id!),
+    enabled: !!id,
+  })
+
+  const list = ticketsQuery.data?.list ?? []
+  const accommodations = accommodationsQuery.data ?? []
+  const eventName = eventQuery.data?.name ?? ''
+  const accRegOpen = eventQuery.data?.accommodationRegistrationOpen ?? true
+  const loading = ticketsQuery.isLoading
 
   const filtered = list.filter((r) =>
     !search ||
@@ -60,10 +60,11 @@ export default function AccommodationTicketsPage() {
   const handleToggleReg = async () => {
     if (!id) return
     setClosingReg(true)
+    const newVal = !accRegOpen
     try {
-      await updateRegistration(id, 'accommodation', !accRegOpen)
-      setAccRegOpen((v) => !v)
-      toast.success(`Accommodation registration ${!accRegOpen ? 'opened' : 'closed'}`)
+      await updateRegistration(id, 'accommodation', newVal)
+      queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? { ...prev, accommodationRegistrationOpen: newVal } : prev)
+      toast.success(`Accommodation registration ${newVal ? 'opened' : 'closed'}`)
     } catch { toast.error('Failed to update registration') }
     finally { setClosingReg(false) }
   }

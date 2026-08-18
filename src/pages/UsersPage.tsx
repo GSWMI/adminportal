@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { UserPlus, Search, MoreVertical, Plus } from 'lucide-react'
 import InviteAdminModal from '../components/InviteAdminModal'
 import { toast } from 'sonner'
 import { getActivityLog, type ActivityLogItem } from '../services/eventService'
 import { getAdmins, resendInvite, type AdminUser } from '../services/userService'
+import { qk } from '../lib/queryKeys'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { useAuth } from '../hooks/useAuth'
@@ -132,48 +134,28 @@ function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onResend }:
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'users' | 'activity'>('users')
   const [showAddUser, setShowAddUser] = useState(false)
   const [search, setSearch] = useState('')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [admins, setAdmins] = useState<AdminUser[]>([])
-  const [adminsLoading, setAdminsLoading] = useState(true)
-  const [logs, setLogs] = useState<ActivityLogItem[]>([])
   const [logPage, setLogPage] = useState(1)
-  const [logTotalPages, setLogTotalPages] = useState(1)
-  const [logLoading, setLogLoading] = useState(false)
   const tableRef = useRef<HTMLDivElement>(null)
 
-  const fetchAdmins = async () => {
-    setAdminsLoading(true)
-    try {
-      const list = await getAdmins()
-      setAdmins(list)
-    } catch {
-      toast.error('Failed to load users')
-    } finally {
-      setAdminsLoading(false)
-    }
-  }
+  const adminsQuery = useQuery({ queryKey: qk.admins(), queryFn: getAdmins })
+  const admins: AdminUser[] = adminsQuery.data ?? []
+  const adminsLoading = adminsQuery.isLoading
 
-  useEffect(() => { fetchAdmins() }, [])
-
-  useEffect(() => {
-    if (activeTab !== 'activity') return
-    async function fetchLogs() {
-      setLogLoading(true)
-      try {
-        const result = await getActivityLog({ page: logPage, limit: 10 })
-        setLogs(result.logs)
-        setLogTotalPages(result.pagination.pages || 1)
-      } catch {
-        toast.error('Failed to load activity log')
-      } finally {
-        setLogLoading(false)
-      }
-    }
-    fetchLogs()
-  }, [activeTab, logPage])
+  // Activity log — only fetched when the tab is open; paginated with keepPreviousData.
+  const activityQuery = useQuery({
+    queryKey: qk.activity({ page: logPage }),
+    queryFn: () => getActivityLog({ page: logPage, limit: 10 }),
+    enabled: activeTab === 'activity',
+    placeholderData: keepPreviousData,
+  })
+  const logs: ActivityLogItem[] = activityQuery.data?.logs ?? []
+  const logTotalPages = activityQuery.data?.pagination.pages || 1
+  const logLoading = activityQuery.isLoading && activeTab === 'activity'
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -360,7 +342,7 @@ export default function UsersPage() {
       </div>
 
       {showAddUser && (
-        <InviteAdminModal onClose={() => { setShowAddUser(false); fetchAdmins() }} />
+        <InviteAdminModal onClose={() => { setShowAddUser(false); queryClient.invalidateQueries({ queryKey: qk.admins() }) }} />
       )}
     </div>
   )

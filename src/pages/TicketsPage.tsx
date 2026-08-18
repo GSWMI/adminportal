@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ticket, Calendar, MapPin, MoreVertical, Plus, Copy, Check } from 'lucide-react'
 import { getAllEvents, updateRegistration, type EventData } from '../services/eventService'
+import { qk } from '../lib/queryKeys'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -233,25 +235,15 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 export default function TicketsPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
-  const [events, setEvents] = useState<EventData[]>([])
-  const [loading, setLoading] = useState(true)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const data = await getAllEvents()
-        setEvents(data)
-      } catch {
-        toast.error('Failed to load tickets')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchEvents()
-  }, [])
+  const { data: events = [], isLoading: loading } = useQuery({
+    queryKey: qk.events(),
+    queryFn: getAllEvents,
+  })
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -266,7 +258,8 @@ export default function TicketsPage() {
   const handleRegistrationToggle = async (id: string, type: 'meal' | 'accommodation' | 'transport' | 'all', open: boolean) => {
     try {
       await updateRegistration(id, type, open)
-      setEvents((prev) => prev.map((e) => {
+      // Optimistically update the cached events list.
+      queryClient.setQueryData<EventData[]>(qk.events(), (prev) => (prev ?? []).map((e) => {
         if (e._id !== id) return e
         const updates: Partial<EventData> = {}
         if (type === 'meal' || type === 'all') updates.mealRegistrationOpen = open

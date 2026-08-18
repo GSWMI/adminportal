@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { ArrowLeft, Search, Download, Loader2 } from 'lucide-react'
-import { getMealTickets, type MealTicketRow } from '../../../services/orderService'
-import { updateRegistration, getEventById } from '../../../services/eventService'
+import { getMealTickets } from '../../../services/orderService'
+import { updateRegistration, getEventById, type EventData } from '../../../services/eventService'
+import { qk } from '../../../lib/queryKeys'
 import { exportMealTicketsCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -20,58 +22,32 @@ const ITEMS_PER_PAGE = 20
 export default function MealTicketsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [activeDay, _setActiveDay] = useState(1)
+  const queryClient = useQueryClient()
+  const [activeDay] = useState(1) // day tabs not active; always day 1
   const [search, setSearch] = useState('')
-  const [list, setList] = useState<MealTicketRow[]>([])
-  const [eventName, setEventName] = useState('')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_totalDays, setTotalDays] = useState(1)
-  const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  const [mealRegOpen, setMealRegOpen] = useState(true)
   const [closingReg, setClosingReg] = useState(false)
-
-  // Server-side pagination — scoped per day
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
 
-  // Fetch event info once on mount
-  useEffect(() => {
-    if (!id) return
-    getEventById(id)
-      .then((event) => {
-        setEventName(event.name)
-        setTotalDays(event.totalDays ?? 1)
-        setMealRegOpen(event.mealRegistrationOpen ?? true)
-      })
-      .catch(() => toast.error('Failed to load event'))
-  }, [id])
+  const eventQuery = useQuery({
+    queryKey: qk.event(id ?? ''),
+    queryFn: () => getEventById(id!),
+    enabled: !!id,
+  })
+  const eventName = eventQuery.data?.name ?? ''
+  const mealRegOpen = eventQuery.data?.mealRegistrationOpen ?? true
 
-  // Fetch meal tickets whenever eventId, day, or page changes
-  // day is passed to the backend so pagination totals reflect that day only
-  useEffect(() => {
-    if (!id) return
-    async function fetchTickets() {
-      setLoading(true)
-      try {
-        const result = await getMealTickets(id!, {
-          page,
-          limit: ITEMS_PER_PAGE,
-          day: activeDay,
-        })
-        setList(result.list)
-        setTotalPages(result.pagination.pages ?? 1)
-        setTotal(result.pagination.total ?? 0)
-      } catch {
-        toast.error('Failed to load meal tickets')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchTickets()
-  }, [id, page, activeDay])
+  // Server-paginated, scoped per day; keepPreviousData avoids a skeleton flash on page change.
+  const mealQuery = useQuery({
+    queryKey: ['mealTickets', id ?? '', activeDay, page],
+    queryFn: () => getMealTickets(id!, { page, limit: ITEMS_PER_PAGE, day: activeDay }),
+    enabled: !!id,
+    placeholderData: keepPreviousData,
+  })
+  const list = mealQuery.data?.list ?? []
+  const totalPages = mealQuery.data?.pagination.pages ?? 1
+  const total = mealQuery.data?.pagination.total ?? 0
+  const loading = mealQuery.isLoading
 
   const handleExport = async () => {
     setExporting(true)
@@ -83,10 +59,11 @@ export default function MealTicketsPage() {
   const handleToggleReg = async () => {
     if (!id) return
     setClosingReg(true)
+    const newVal = !mealRegOpen
     try {
-      await updateRegistration(id, 'meal', !mealRegOpen)
-      setMealRegOpen((v) => !v)
-      toast.success(`Meal registration ${!mealRegOpen ? 'opened' : 'closed'}`)
+      await updateRegistration(id, 'meal', newVal)
+      queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? { ...prev, mealRegistrationOpen: newVal } : prev)
+      toast.success(`Meal registration ${newVal ? 'opened' : 'closed'}`)
     } catch { toast.error('Failed to update registration') }
     finally { setClosingReg(false) }
   }

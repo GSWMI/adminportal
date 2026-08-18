@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Timer, Copy, ExternalLink, ArrowLeft, Loader2 } from 'lucide-react'
 import { useTicketStore } from '../../../store/ticketStore'
 import { createEvent, createAccommodation, createTransport } from '../../../services/eventService'
 import { mapFormToEventPayload, mapAccommodationPayload, mapTransportPayload, validateEventForm } from '../../../validations/eventValidation'
+import { qk } from '../../../lib/queryKeys'
 import { toast } from 'sonner'
 
 interface Props {
@@ -18,6 +20,7 @@ export default function StepPublish({ onPreview }: Props) {
   const [ticketUrl, setTicketUrl] = useState('')
   const { form, reset } = useTicketStore()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const handlePublish = async () => {
     const error = validateEventForm(form)
@@ -49,6 +52,10 @@ export default function StepPublish({ onPreview }: Props) {
           )
         )
       }
+
+      // Refresh the events list + dashboard so the new event appears immediately.
+      queryClient.invalidateQueries({ queryKey: qk.events() })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
 
       // Use slug from API response if available, fall back to generated one
       const slug = created.slug ?? form.programName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')

@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Search, ExternalLink, XCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { getAttendees, type AttendeeRow } from '../../../services/orderService'
-import { getEventById, updateRegistration } from '../../../services/eventService'
+import { getEventById, updateRegistration, type EventData } from '../../../services/eventService'
+import { qk } from '../../../lib/queryKeys'
 import { exportAttendeesCsv } from '../../../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -39,30 +41,28 @@ function purchaserName(r: AttendeeRow): string {
 export default function AttendeesPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [ticketFilter, setTicketFilter] = useState<string>('all')
   const [modeFilter, setModeFilter] = useState<string>('all')
-  const [list, setList] = useState<AttendeeRow[]>([])
-  const [eventName, setEventName] = useState('')
-  const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [closingReg, setClosingReg] = useState(false)
-  const [regOpen, setRegOpen] = useState(true)
 
-  useEffect(() => {
-    if (!id) return
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const [result, event] = await Promise.all([getAttendees(id!), getEventById(id!)])
-        setList(result.list)
-        setEventName(event.name)
-        setRegOpen(event.registrationOpen ?? true)
-      } catch { toast.error('Failed to load attendees') }
-      finally { setLoading(false) }
-    }
-    fetchData()
-  }, [id])
+  const attendeesQuery = useQuery({
+    queryKey: qk.attendees(id ?? ''),
+    queryFn: () => getAttendees(id!),
+    enabled: !!id,
+  })
+  const eventQuery = useQuery({
+    queryKey: qk.event(id ?? ''),
+    queryFn: () => getEventById(id!),
+    enabled: !!id,
+  })
+
+  const list: AttendeeRow[] = attendeesQuery.data?.list ?? []
+  const eventName = eventQuery.data?.name ?? ''
+  const regOpen = eventQuery.data?.registrationOpen ?? true
+  const loading = attendeesQuery.isLoading
 
   // Show the registration-mode column + filter only once the data carries it
   // (i.e. the backend returns a purchaser/registrationType on at least one row).
@@ -85,10 +85,17 @@ export default function AttendeesPage() {
   const handleToggleRegistration = async () => {
     if (!id) return
     setClosingReg(true)
+    const newVal = !regOpen
     try {
-      await updateRegistration(id, 'all', !regOpen)
-      setRegOpen((v) => !v)
-      toast.success(regOpen ? 'Registration closed' : 'Registration opened')
+      await updateRegistration(id, 'all', newVal)
+      queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? {
+        ...prev,
+        registrationOpen: newVal,
+        mealRegistrationOpen: newVal,
+        accommodationRegistrationOpen: newVal,
+        transportRegistrationOpen: newVal,
+      } : prev)
+      toast.success(newVal ? 'Registration opened' : 'Registration closed')
     } catch { toast.error('Failed to update registration') }
     finally { setClosingReg(false) }
   }

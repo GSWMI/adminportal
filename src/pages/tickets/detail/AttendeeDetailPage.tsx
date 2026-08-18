@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Mail, Phone, MessageCircle, User, Users, Loader2, Download } from 'lucide-react'
 import { resendTicket, mapPaymentStatus, type OrderData } from '../../../services/orderService'
-import { getEventById, type EventData } from '../../../services/eventService'
+import { getEventById } from '../../../services/eventService'
+import { qk } from '../../../lib/queryKeys'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -48,32 +50,23 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export default function AttendeeDetailPage() {
   const { id, orderNumber } = useParams<{ id: string; orderNumber: string }>()
   const navigate = useNavigate()
-  const [order, setOrder] = useState<OrderData | null>(null)
-  const [event, setEvent] = useState<EventData | null>(null)
-  const [loading, setLoading] = useState(true)
   const [resending, setResending] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const ticketRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!orderNumber || !id) return
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const [o, e] = await Promise.all([
-          fetchOrderByNumber(orderNumber!),
-          getEventById(id!),
-        ])
-        setOrder(o)
-        setEvent(e)
-      } catch {
-        toast.error('Failed to load attendee details')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [orderNumber, id])
+  const orderQuery = useQuery({
+    queryKey: ['order', 'byNumber', orderNumber ?? ''],
+    queryFn: () => fetchOrderByNumber(orderNumber!),
+    enabled: !!orderNumber,
+  })
+  const eventQuery = useQuery({
+    queryKey: qk.event(id ?? ''),
+    queryFn: () => getEventById(id!),
+    enabled: !!id,
+  })
+  const order = orderQuery.data ?? null
+  const event = eventQuery.data ?? null
+  const loading = orderQuery.isLoading || eventQuery.isLoading
 
   const handleResend = async () => {
     if (!order) return
