@@ -1,53 +1,48 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
-import { getEventAccommodations, type AccommodationData } from '../../services/eventService'
+import { getEventAccommodations } from '../../services/eventService'
 import {
   getSponsorshipById, getSponsorshipTickets, downloadSponsorshipTicket,
-  type Sponsorship, type SponsorshipTicket,
+  type SponsorshipTicket,
 } from '../../services/contributionService'
+import { qk } from '../../lib/queryKeys'
 import { formatDate, money } from './format'
 import { PaymentStatusPill, Card, Row } from './parts'
 
 export default function SponsorshipDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [sponsorship, setSponsorship] = useState<Sponsorship | null>(null)
-  const [tickets, setTickets] = useState<SponsorshipTicket[]>([])
-  const [accNames, setAccNames] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(true)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!id) return
-    let cancelled = false
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const s = await getSponsorshipById(id!)
-        if (cancelled) return
-        setSponsorship(s)
-        const [tks, accs] = await Promise.all([
-          getSponsorshipTickets(s.eventId).catch(() => [] as SponsorshipTicket[]),
-          getEventAccommodations(s.eventId).catch(() => [] as AccommodationData[]),
-        ])
-        if (cancelled) return
-        setTickets(tks.filter((t) => t.sponsorshipId === s.id))
-        const map: Record<string, string> = {}
-        for (const a of accs) map[(a.id ?? a._id) as string] = a.name
-        setAccNames(map)
-      } catch {
-        toast.error('Failed to load sponsorship')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    fetchData()
-    return () => { cancelled = true }
-  }, [id])
+  const sponsorshipQuery = useQuery({
+    queryKey: qk.sponsorship(id ?? ''),
+    queryFn: () => getSponsorshipById(id!),
+    enabled: !!id,
+  })
+  const sponsorship = sponsorshipQuery.data ?? null
+  const eventId = sponsorship?.eventId
+
+  // Dependent on the sponsorship's eventId.
+  const ticketsQuery = useQuery({
+    queryKey: ['sponsorshipTickets', eventId ?? ''],
+    queryFn: () => getSponsorshipTickets(eventId!),
+    enabled: !!eventId,
+  })
+  const accommodationsQuery = useQuery({
+    queryKey: qk.eventAccommodations(eventId ?? ''),
+    queryFn: () => getEventAccommodations(eventId!),
+    enabled: !!eventId,
+  })
+
+  const loading = sponsorshipQuery.isLoading
+  const tickets = (ticketsQuery.data ?? []).filter((t) => t.sponsorshipId === sponsorship?.id)
+  const accNames: Record<string, string> = {}
+  for (const a of accommodationsQuery.data ?? []) accNames[(a.id ?? a._id) as string] = a.name
 
   const handleDownload = async (t: SponsorshipTicket) => {
     setDownloadingId(t.id)

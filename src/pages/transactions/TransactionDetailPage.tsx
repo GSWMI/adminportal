@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Download, FileText, Image } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { getOrderById, mapPaymentStatus, getTicketTypes, type OrderData } from '../../services/orderService'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getOrderById, mapPaymentStatus, getTicketTypes } from '../../services/orderService'
+import { qk } from '../../lib/queryKeys'
 import Receipt from './Receipt'
 import { useReceiptDownload } from '../../hooks/useReceiptDownload'
-import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
@@ -27,24 +28,15 @@ export default function TransactionDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
-  const [order, setOrder] = useState<OrderData | null>(null)
-  const [loading, setLoading] = useState(true)
   const { receiptRef, downloadPDF, downloadImage, downloading } = useReceiptDownload()
 
-  useEffect(() => {
-    if (!id) return
-    async function fetchOrder() {
-      try {
-        const data = await getOrderById(id!)
-        setOrder(data)
-      } catch {
-        toast.error('Failed to load transaction details')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchOrder()
-  }, [id])
+  const orderQuery = useQuery({
+    queryKey: qk.order(id ?? ''),
+    queryFn: () => getOrderById(id!),
+    enabled: !!id,
+  })
+  const order = orderQuery.data ?? null
+  const loading = orderQuery.isLoading
 
   if (loading) {
     return (

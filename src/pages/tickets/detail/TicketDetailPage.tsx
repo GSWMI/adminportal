@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil, Calendar, MapPin, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { getEventById, updateEvent, updateRegistration, getEventAccommodations, getEventTransport, updateAccommodation, updateTransportById, type EventData, type AccommodationData, type TransportData } from '../../../services/eventService'
+import { qk } from '../../../lib/queryKeys'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -143,16 +145,19 @@ function OptionsSection({ event, editing, onEdit, onSave }: {
   const [saving, setSaving] = useState(false)
   const dirty = JSON.stringify(prices) !== JSON.stringify(event.mealPrices)
 
-  // Accommodation & transport live on their own endpoints — fetch them for display.
-  const [accommodations, setAccommodations] = useState<AccommodationData[]>([])
-  const [transports, setTransports] = useState<TransportData[]>([])
-  const [loadingExtras, setLoadingExtras] = useState(true)
-  useEffect(() => {
-    Promise.allSettled([
-      getEventAccommodations(event._id).then(setAccommodations).catch(() => {}),
-      getEventTransport(event._id).then(setTransports).catch(() => {}),
-    ]).finally(() => setLoadingExtras(false))
-  }, [event._id])
+  // Accommodation & transport live on their own endpoints (shared cache with the sponsorship-pricing section).
+  const queryClient = useQueryClient()
+  const accommodationsQuery = useQuery({
+    queryKey: qk.eventAccommodations(event._id),
+    queryFn: () => getEventAccommodations(event._id),
+  })
+  const transportsQuery = useQuery({
+    queryKey: qk.eventTransports(event._id),
+    queryFn: () => getEventTransport(event._id),
+  })
+  const accommodations = accommodationsQuery.data ?? []
+  const transports = transportsQuery.data ?? []
+  const loadingExtras = accommodationsQuery.isLoading || transportsQuery.isLoading
 
   const toggleSlot = (slot: string) =>
     setOpenSlots((p) => p.includes(slot) ? p.filter((s) => s !== slot) : [...p, slot])
@@ -230,7 +235,7 @@ function OptionsSection({ event, editing, onEdit, onSave }: {
                 key={a.id ?? a._id ?? a.name}
                 acc={a}
                 editing={editing}
-                onUpdated={(u) => setAccommodations((prev) => prev.map((x) => ((x.id ?? x._id) === (u.id ?? u._id) ? u : x)))}
+                onUpdated={(u) => queryClient.setQueryData<AccommodationData[]>(qk.eventAccommodations(event._id), (prev) => (prev ?? []).map((x) => ((x.id ?? x._id) === (u.id ?? u._id) ? u : x)))}
               />
             ))}
           </div>
@@ -247,7 +252,7 @@ function OptionsSection({ event, editing, onEdit, onSave }: {
                 key={t._id ?? t.name}
                 item={t}
                 editing={editing}
-                onUpdated={(u) => setTransports((prev) => prev.map((x) => (x._id === u._id ? u : x)))}
+                onUpdated={(u) => queryClient.setQueryData<TransportData[]>(qk.eventTransports(event._id), (prev) => (prev ?? []).map((x) => (x._id === u._id ? u : x)))}
               />
             ))}
           </div>
@@ -280,6 +285,7 @@ function MiniField({ label, value, onChange, type = 'text', prefix }: {
 function EditableAccommodationCard({ acc, editing, onUpdated }: {
   acc: AccommodationData; editing: boolean; onUpdated: (a: AccommodationData) => void
 }) {
+  const queryClient = useQueryClient()
   const cap0 = acc.totalCapacity ?? acc.capacity
   const [name, setName] = useState(acc.name)
   const [price, setPrice] = useState(String(acc.price ?? ''))
@@ -312,6 +318,8 @@ function EditableAccommodationCard({ acc, editing, onUpdated }: {
         ...acc, name, price: Number(price) || 0, peoplePerRoom: Number(ppr) || 0,
         capacity: (capNum ?? acc.capacity) as number, totalCapacity: capNum ?? acc.totalCapacity,
       })
+      // Refresh other views of this event's accommodations (ticket page, sponsorship detail).
+      queryClient.invalidateQueries({ queryKey: qk.eventAccommodations(acc.eventId) })
       toast.success('Accommodation updated')
     } catch {
       toast.error('Failed to update accommodation')
@@ -352,6 +360,7 @@ function EditableAccommodationCard({ acc, editing, onUpdated }: {
 function EditableTransportCard({ item, editing, onUpdated }: {
   item: TransportData; editing: boolean; onUpdated: (t: TransportData) => void
 }) {
+  const queryClient = useQueryClient()
   const [name, setName] = useState(item.name)
   const [price, setPrice] = useState(String(item.price ?? ''))
   const [pickup, setPickup] = useState(item.pickupLocation ?? '')
@@ -373,6 +382,7 @@ function EditableTransportCard({ item, editing, onUpdated }: {
       }
       await updateTransportById(item._id, payload)
       onUpdated({ ...item, name, price: Number(price) || 0, pickupLocation: pickup })
+      queryClient.invalidateQueries({ queryKey: qk.eventTransports(item.eventId) })
       toast.success('Transport updated')
     } catch {
       toast.error('Failed to update transport')
@@ -558,8 +568,12 @@ function SponsorshipPricingSection({ event, onSave }: {
   onSave: (data: Partial<EventData>) => Promise<void>
 }) {
   const sup = event.sponsorshipUnitPrices
-  const [accommodations, setAccommodations] = useState<AccommodationData[]>([])
-  const [loadingAcc, setLoadingAcc] = useState(true)
+  const accommodationsQuery = useQuery({
+    queryKey: qk.eventAccommodations(event._id),
+    queryFn: () => getEventAccommodations(event._id),
+  })
+  const accommodations = accommodationsQuery.data ?? []
+  const loadingAcc = accommodationsQuery.isLoading
   // Prefill from the event's saved sponsorship prices (GET now returns them).
   const [meal, setMeal] = useState(sup?.meal != null ? String(sup.meal) : '')
   const [transport, setTransport] = useState(sup?.transport != null ? String(sup.transport) : '')
@@ -569,13 +583,6 @@ function SponsorshipPricingSection({ event, onSave }: {
     return init
   })
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    getEventAccommodations(event._id)
-      .then(setAccommodations)
-      .catch(() => { /* leave empty */ })
-      .finally(() => setLoadingAcc(false))
-  }, [event._id])
 
   const accId = (a: AccommodationData) => (a.id ?? a._id) as string
 
@@ -634,35 +641,29 @@ function SponsorshipPricingSection({ event, onSave }: {
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [activeSection, setActiveSection] = useState(0)
   const [editingSection, setEditingSection] = useState<number | null>(null)
-  const [event, setEvent] = useState<EventData | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!id) return
-    async function fetchEvent() {
-      try {
-        const data = await getEventById(id!)
-        setEvent(data)
-      } catch {
-        toast.error('Failed to load ticket details')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchEvent()
-  }, [id])
+  const eventQuery = useQuery({
+    queryKey: qk.event(id ?? ''),
+    queryFn: () => getEventById(id!),
+    enabled: !!id,
+  })
+  const event = eventQuery.data ?? null
+  const loading = eventQuery.isLoading
 
   const handleRegistrationUpdate = (updates: Partial<EventData>) => {
-    setEvent((prev) => prev ? { ...prev, ...updates } : prev)
+    if (!id) return
+    queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? { ...prev, ...updates } : prev)
   }
 
   const handleSave = async (updates: Partial<EventData>) => {
-    if (!event || !id) return
+    if (!id) return
     try {
       const updated = await updateEvent(id, updates)
-      setEvent((prev) => prev ? { ...prev, ...updated, ...updates } : prev)
+      queryClient.setQueryData<EventData>(qk.event(id), (prev) => prev ? { ...prev, ...updated, ...updates } : prev)
+      queryClient.invalidateQueries({ queryKey: qk.events() }) // keep the Tickets list in sync
       setEditingSection(null)
       toast.success('Changes saved')
     } catch {

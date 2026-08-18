@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Calendar, MapPin, ChevronDown, ChevronUp, Minus, Plus, Loader2 } from 'lucide-react'
 import { getEventBySlug, type EventData } from '../../services/eventService'
 
@@ -19,26 +20,17 @@ interface QuantityState {
 export default function PublicEventPage() {
   const { slug } = useParams()
   const navigate = useNavigate()
-  const [event, setEvent] = useState<EventData | null>(null)
-  const [loading, setLoading] = useState(true)
   const [mealOpen, setMealOpen] = useState(true)
   const [activeDay, setActiveDay] = useState(0)
   const [quantities, setQuantities] = useState<QuantityState>({})
 
-  useEffect(() => {
-    if (!slug) return
-    async function fetchEvent() {
-      try {
-        const data = await getEventBySlug(slug!)
-        setEvent(data)
-      } catch {
-        // Event not found
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchEvent()
-  }, [slug])
+  const eventQuery = useQuery({
+    queryKey: ['eventSlug', slug ?? ''],
+    queryFn: () => getEventBySlug(slug!),
+    enabled: !!slug,
+  })
+  const event = eventQuery.data ?? null
+  const loading = eventQuery.isLoading
 
   const setQty = (day: number, slot: string, optIndex: number, delta: number) => {
     setQuantities((prev) => {

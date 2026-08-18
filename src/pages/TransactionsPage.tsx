@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { Search, SlidersHorizontal, ExternalLink, Calendar, MoreVertical, FileText, Loader2 } from 'lucide-react'
 import { getAllOrders, mapPaymentStatus, getTicketTypes, type OrderData } from '../services/orderService'
-import { getAllEvents, type EventData } from '../services/eventService'
+import { getAllEvents } from '../services/eventService'
+import { qk } from '../lib/queryKeys'
 import { exportOrdersCsv } from '../services/exportService'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
@@ -94,49 +96,28 @@ const ITEMS_PER_PAGE = 20
 export default function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalOrders, setTotalOrders] = useState(0)
-  const [orders, setOrders] = useState<OrderData[]>([])
-  const [loading, setLoading] = useState(true)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
-
-  // Event filter
-  const [events, setEvents] = useState<EventData[]>([])
   const [selectedEventId, setSelectedEventId] = useState<string>('')
-  const [eventsLoading, setEventsLoading] = useState(true)
 
   const tableRef = useRef<HTMLDivElement>(null)
 
-  // Load events for the filter dropdown
-  useEffect(() => {
-    getAllEvents()
-      .then(setEvents)
-      .catch(() => toast.error('Failed to load events'))
-      .finally(() => setEventsLoading(false))
-  }, [])
+  // Events for the filter dropdown
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
+    queryKey: qk.events(),
+    queryFn: getAllEvents,
+  })
 
-  // Fetch orders whenever page or event filter changes
-  useEffect(() => {
-    async function fetchOrders() {
-      try {
-        setLoading(true)
-        const result = await getAllOrders({
-          eventId: selectedEventId || undefined,
-          page,
-          limit: ITEMS_PER_PAGE,
-        })
-        setOrders(result.orders)
-        setTotalPages(result.pagination.pages ?? 1)
-        setTotalOrders(result.pagination.total ?? 0)
-      } catch {
-        toast.error('Failed to load transactions')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchOrders()
-  }, [page, selectedEventId])
+  // Orders — server-paginated; keepPreviousData avoids a skeleton flash on page change.
+  const ordersQuery = useQuery({
+    queryKey: qk.orders({ eventId: selectedEventId || undefined, page, limit: ITEMS_PER_PAGE }),
+    queryFn: () => getAllOrders({ eventId: selectedEventId || undefined, page, limit: ITEMS_PER_PAGE }),
+    placeholderData: keepPreviousData,
+  })
+  const orders = ordersQuery.data?.orders ?? []
+  const totalPages = ordersQuery.data?.pagination.pages ?? 1
+  const totalOrders = ordersQuery.data?.pagination.total ?? 0
+  const loading = ordersQuery.isLoading
 
   // Close menu on outside click
   useEffect(() => {
