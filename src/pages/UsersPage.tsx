@@ -4,7 +4,7 @@ import { UserPlus, Search, MoreVertical, Plus } from 'lucide-react'
 import InviteAdminModal from '../components/InviteAdminModal'
 import { toast } from 'sonner'
 import { getActivityLog, type ActivityLogItem } from '../services/eventService'
-import { getAdmins, resendInvite, type AdminUser } from '../services/userService'
+import { getAdmins, resendInvite, deleteAdmin, type AdminUser } from '../services/userService'
 import { qk } from '../lib/queryKeys'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -64,12 +64,13 @@ function SortIcon() {
   )
 }
 
-function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onResend }: {
+function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onResend, onRemove }: {
   admin: AdminUser
   isCurrentUser: boolean
   openMenuId: string | null
   setOpenMenuId: (id: string | null) => void
   onResend: (id: string) => void
+  onRemove: (id: string, name: string) => void
 }) {
   const menuOpen = openMenuId === admin.id
   const isPending = admin.status?.toLowerCase() === 'pending'
@@ -118,9 +119,8 @@ function AdminRow({ admin, isCurrentUser, openMenuId, setOpenMenuId, onResend }:
                   </button>
                 )}
                 <button
-                  disabled
-                  title="Coming soon"
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-gray-300 cursor-not-allowed whitespace-nowrap">
+                  onClick={() => { setOpenMenuId(null); onRemove(admin.id, `${admin.firstName} ${admin.lastName}`) }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap">
                   Remove user
                 </button>
               </div>
@@ -173,6 +173,20 @@ export default function UsersPage() {
       const message =
         (err as { response?: { data?: { message?: string } } })
           ?.response?.data?.message ?? 'Failed to resend invite'
+      toast.error(message)
+    }
+  }
+
+  const handleRemove = async (id: string, name: string) => {
+    if (!window.confirm(`Remove ${name.trim() || 'this admin'}? This cannot be undone.`)) return
+    try {
+      await deleteAdmin(id)
+      queryClient.invalidateQueries({ queryKey: qk.admins() })
+      toast.success('Admin removed')
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message ?? 'Failed to remove admin'
       toast.error(message)
     }
   }
@@ -250,7 +264,7 @@ export default function UsersPage() {
                     <AdminRow key={admin.id} admin={admin}
                       isCurrentUser={admin.email === currentUser?.email}
                       openMenuId={openMenuId} setOpenMenuId={setOpenMenuId}
-                      onResend={handleResend} />
+                      onResend={handleResend} onRemove={handleRemove} />
                   ))
                 )}
               </tbody>
