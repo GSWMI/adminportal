@@ -9,6 +9,7 @@ interface LoginPayload {
 interface LoginResult {
   token: string
   user: AuthUser
+  refreshToken?: string
 }
 
 function mapProfile(profileData: Record<string, unknown>): AuthUser {
@@ -37,11 +38,16 @@ export async function loginUser({ email, password }: LoginPayload): Promise<Logi
 
   if (!token) throw new Error('No token returned from server')
 
+  // Opaque refresh token — persisted so the axios interceptor can silently renew
+  // the access token on 401 instead of logging the admin out. (POST /auth/refresh)
+  const refreshToken =
+    loginData?.data?.refreshToken ?? loginData?.refreshToken ?? undefined
+
   const { data: profileData } = await api.get('/auth/profile', {
     headers: { Authorization: `Bearer ${token}` },
   })
 
-  return { token, user: mapProfile(profileData) }
+  return { token, user: mapProfile(profileData), refreshToken }
 }
 
 export async function fetchProfile(): Promise<AuthUser> {

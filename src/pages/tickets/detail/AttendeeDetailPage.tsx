@@ -250,6 +250,37 @@ export default function AttendeeDetailPage() {
           </div>
         </div>
 
+        {/* Purchaser — shown when someone paid on this attendee's behalf */}
+        {order.purchaser?.email && order.purchaser.email.toLowerCase() !== (order.guest.email ?? '').toLowerCase() && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50">
+              <h2 className="text-[13px] font-semibold text-gray-700 uppercase tracking-wide">Registered by (purchaser)</h2>
+            </div>
+            <div className="px-5 py-2">
+              <InfoRow label="Full name" value={
+                <span className="flex items-center gap-1.5">
+                  <User size={13} className="text-gray-400" />
+                  {`${order.purchaser.firstName ?? ''} ${order.purchaser.lastName ?? ''}`.trim() || '—'}
+                </span>
+              } />
+              <InfoRow label="Email" value={
+                <a href={`mailto:${order.purchaser.email}`} className="flex items-center gap-1.5 text-[#3b5bdb] hover:underline">
+                  <Mail size={13} />
+                  {order.purchaser.email}
+                </a>
+              } />
+              {order.purchaser.phone && (
+                <InfoRow label="Phone" value={
+                  <span className="flex items-center gap-1.5">
+                    <Phone size={13} className="text-gray-400" />
+                    {order.purchaser.phone}
+                  </span>
+                } />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Next of kin */}
         {order.guest.nextOfKin && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

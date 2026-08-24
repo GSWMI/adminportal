@@ -40,6 +40,11 @@ export async function resendInvite(id: string): Promise<void> {
   await api.post(`/auth/admin/${id}/resend-invite`)
 }
 
+// Delete an admin. DELETE /auth/:id (per backend).
+export async function deleteAdmin(id: string): Promise<void> {
+  await api.delete(`/auth/${id}`)
+}
+
 // List admins for the Users page.
 export async function getAdmins(): Promise<AdminUser[]> {
   const { data } = await api.get('/auth/admins')

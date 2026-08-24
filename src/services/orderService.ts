@@ -44,6 +44,9 @@ export interface OrderData {
   orderNumber: string
   eventId: string
   guest: OrderGuest
+  // Present when someone paid on another's behalf (compare purchaser.email vs guest.email).
+  purchaser?: { firstName?: string; lastName?: string; email?: string; phone?: string }
+  registrationType?: string
   status: string
   paymentStatus: string
   totalAmount: number
@@ -118,8 +121,7 @@ export interface AttendeeRow {
   totalAmount: number
   paidAt: string
   registeredAt: string
-  // Registration mode — PENDING backend (see attendee-registration-mode request).
-  // Expected: 'self' | 'someone_else'; purchaser = who paid, when on someone's behalf.
+  // Registration mode: 'self' | 'someone_else'; purchaser = who paid, when on someone's behalf.
   registrationType?: string
   purchaser?: { firstName?: string; lastName?: string; email?: string; phone?: string }
 }

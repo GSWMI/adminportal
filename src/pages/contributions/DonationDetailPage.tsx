@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Download, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
-import { getDonationById } from '../../services/contributionService'
+import { getDonationById, downloadDonationReceipt } from '../../services/contributionService'
 import { qk } from '../../lib/queryKeys'
 import { formatDate, money } from './format'
 import { PaymentStatusPill, Card, Row } from './parts'
@@ -11,6 +13,7 @@ import { PaymentStatusPill, Card, Row } from './parts'
 export default function DonationDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [downloading, setDownloading] = useState(false)
 
   const donationQuery = useQuery({
     queryKey: qk.donation(id ?? ''),
@@ -22,15 +25,39 @@ export default function DonationDetailPage() {
 
   const anon = donation?.isAnonymous
 
+  const handleDownloadReceipt = async () => {
+    if (!donation) return
+    setDownloading(true)
+    try {
+      await downloadDonationReceipt(donation.id, donation.referenceNumber)
+    } catch {
+      toast.error('Failed to download receipt')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   return (
     <div className="max-w-[820px]">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate('/contributions')} className="text-gray-400 hover:text-gray-600 transition-colors">
-          <ArrowLeft size={18} />
-        </button>
-        <h1 className="text-[18px] font-semibold text-gray-900">Donation</h1>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/contributions')} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="text-[18px] font-semibold text-gray-900">Donation</h1>
+          {donation && (
+            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-mono">{donation.referenceNumber}</span>
+          )}
+        </div>
         {donation && (
-          <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[12px] font-mono">{donation.referenceNumber}</span>
+          <button
+            onClick={handleDownloadReceipt}
+            disabled={downloading}
+            className="flex items-center gap-2 px-4 py-2 bg-[#3b5bdb] text-white rounded-lg text-[13px] font-medium hover:bg-[#3451c7] transition-colors disabled:opacity-60"
+          >
+            {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            Download receipt
+          </button>
         )}
       </div>
 

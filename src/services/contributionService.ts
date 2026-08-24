@@ -100,6 +100,20 @@ export async function getDonations(eventId?: string): Promise<Donation[]> {
   return eventId ? arr.filter((d) => d.eventId === eventId) : arr
 }
 
+export async function downloadDonationReceipt(id: string, reference?: string): Promise<void> {
+  const res = await api.get(`/donations/${id}/download`, { responseType: 'blob' })
+  const contentType = String(res.headers?.['content-type'] ?? '')
+  const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('image') ? 'png' : 'pdf'
+  const url = URL.createObjectURL(res.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `donation-receipt-${reference ?? id}.${ext}`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
 export async function getDonationById(id: string): Promise<Donation> {
   const { data } = await api.get(`/donations/${id}`)
   return data?.data?.donation ?? data?.data ?? data?.donation ?? data

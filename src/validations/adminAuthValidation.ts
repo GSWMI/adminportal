@@ -1,10 +1,14 @@
 import * as Yup from 'yup'
 
-// Shared password policy. NOTE: mirror the backend's real "secure password" rules once
-// confirmed (min length / complexity) — see admin-auth confirmation list #5.
+// Shared password policy (mirrors backend): min 8, with uppercase, lowercase, number
+// and special character.
 export const PASSWORD_MIN = 8
 const passwordRule = Yup.string()
   .min(PASSWORD_MIN, `Password must be at least ${PASSWORD_MIN} characters`)
+  .matches(/[A-Z]/, 'Include at least one uppercase letter')
+  .matches(/[a-z]/, 'Include at least one lowercase letter')
+  .matches(/[0-9]/, 'Include at least one number')
+  .matches(/[^A-Za-z0-9]/, 'Include at least one special character')
   .required('Password is required')
 
 // ── Set password (unified: new-admin onboarding AND forgot-password reset) ──────
