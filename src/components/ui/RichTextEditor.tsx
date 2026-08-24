@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, List } from 'lucide-react'
 
 interface Props {
@@ -8,10 +8,30 @@ interface Props {
   minHeight?: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function RichTextEditor({ value: _value, onChange, placeholder = 'Start typing...', minHeight = '120px' }: Props) {
+export default function RichTextEditor({ value, onChange, placeholder = 'Start typing...', minHeight = '120px' }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set())
+
+  // Prefer <p> over <div> when Enter is pressed, so paragraph/line structure is
+  // preserved in the HTML we emit (and survives sanitizing + attendee display).
+  useEffect(() => {
+    try {
+      document.execCommand('defaultParagraphSeparator', false, 'p')
+    } catch {
+      /* not supported in this browser — falls back to <div>, still handled downstream */
+    }
+  }, [])
+
+  // Sync the incoming value into the editable div. Guarded on inequality so it
+  // only writes on mount / external changes (e.g. navigating back to this step,
+  // editing an existing event) and never clobbers the caret while typing —
+  // during typing, onChange feeds `value` back identical, so this is a no-op.
+  useEffect(() => {
+    const el = ref.current
+    if (el && (value ?? '') !== el.innerHTML) {
+      el.innerHTML = value ?? ''
+    }
+  }, [value])
 
   const updateActiveFormats = useCallback(() => {
     const formats = new Set<string>()

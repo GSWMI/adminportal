@@ -4,6 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil, Calendar, MapPin, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { getEventById, updateEvent, updateRegistration, getEventAccommodations, getEventTransport, updateAccommodation, updateTransportById, type EventData, type AccommodationData, type TransportData } from '../../../services/eventService'
 import { qk } from '../../../lib/queryKeys'
+import { sanitizeRichHtml } from '../../../lib/richText'
+import RichTextEditor from '../../../components/ui/RichTextEditor'
+import RichTextDisplay from '../../../components/ui/RichTextDisplay'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -29,7 +32,7 @@ function EventInfoSection({ event, editing, onEdit, onSave }: {
 
   const handleSave = async () => {
     setSaving(true)
-    await onSave({ name, description: desc })
+    await onSave({ name, description: sanitizeRichHtml(desc) })
     setSaving(false)
   }
 
@@ -42,7 +45,7 @@ function EventInfoSection({ event, editing, onEdit, onSave }: {
         </div>
         {event.bannerUrl && <img src={event.bannerUrl} alt="" className="w-[80px] h-[80px] rounded-lg object-cover mb-3" />}
         <p className="text-[15px] font-semibold text-gray-900 mb-2">{event.name}</p>
-        <p className="text-[13px] text-gray-600 leading-relaxed mb-4">{event.description}</p>
+        <RichTextDisplay html={event.description} className="text-[13px] text-gray-600 leading-relaxed mb-4" />
         <div className="flex items-center gap-2 text-[13px] text-gray-600 mb-2">
           <Calendar size={13} className="text-gray-400" />
           {formatDate(event.startDate)} — {formatDate(event.endDate)}
@@ -65,12 +68,9 @@ function EventInfoSection({ event, editing, onEdit, onSave }: {
         onChange={(e) => setName(e.target.value)}
         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 mb-3 transition-all"
       />
-      <textarea
-        value={desc}
-        onChange={(e) => setDesc(e.target.value)}
-        rows={5}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-[13px] outline-none focus:border-[#3b5bdb] focus:ring-2 focus:ring-[#3b5bdb]/20 resize-none transition-all leading-relaxed mb-3"
-      />
+      <div className="mb-3">
+        <RichTextEditor value={desc} onChange={setDesc} placeholder="Event description" />
+      </div>
       <div className="flex items-center gap-2 text-[13px] text-gray-600 mb-2">
         <Calendar size={13} className="text-gray-400" />
         {formatDate(event.startDate)} — {formatDate(event.endDate)}

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ticket, Calendar, MapPin, MoreVertical, Plus, Copy, Check } from 'lucide-react'
 import { getAllEvents, updateRegistration, type EventData } from '../services/eventService'
 import { qk } from '../lib/queryKeys'
+import { richTextToPlain } from '../lib/richText'
 import { toast } from 'sonner'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -112,7 +113,7 @@ function TicketCard({ event, openMenuId, setOpenMenuId, onRegistrationToggle }: 
               </div>
             </div>
 
-            <p className="text-[13px] text-gray-500 mb-3 line-clamp-2">{event.description}</p>
+            <p className="text-[13px] text-gray-500 mb-3 line-clamp-2">{richTextToPlain(event.description)}</p>
 
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1.5 text-[12px] text-gray-500">

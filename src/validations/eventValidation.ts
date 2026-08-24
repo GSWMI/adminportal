@@ -1,4 +1,5 @@
 import type { TicketFormData } from '../store/ticketStore'
+import { sanitizeRichHtml, richTextToPlain } from '../lib/richText'
 
 // ── Interfaces (for type safety) ─────────────────────────────────────────────
 
@@ -41,11 +42,10 @@ export interface TransportApiPayload {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function stripHtml(html: unknown): string {
-  if (!html || typeof html !== 'string') return ''
-  return html.replace(/<[^>]*>/g, '').trim()
-}
+// Long-form, attendee-facing fields (description, consentText) keep their
+// formatting via sanitizeRichHtml. Short accommodation/transport descriptions
+// are flattened to readable plain text so they stay safe to render as plain text
+// wherever they appear.
 
 function mapMealOptions(form: TicketFormData): MealOptionGroupPayload[] {
   const result: MealOptionGroupPayload[] = []
@@ -79,12 +79,12 @@ export function mapFormToEventPayload(form: TicketFormData): FormData {
   const fd = new FormData()
 
   fd.append('name', form.programName.trim())
-  fd.append('description', stripHtml(form.description) || form.description || '')
+  fd.append('description', sanitizeRichHtml(form.description))
   fd.append('startDate', form.startDate)
   fd.append('endDate', form.endDate)
   fd.append('totalDays', String(Number(form.totalDays) || form.days.length || 1))
   fd.append('location', form.location.trim())
-  fd.append('consentText', stripHtml(form.consentText) || form.consentText || '')
+  fd.append('consentText', sanitizeRichHtml(form.consentText))
   // Optional WhatsApp group link — only sent when the admin provides one.
   if (form.whatsappGroupLink?.trim()) {
     fd.append('whatsappLink', form.whatsappGroupLink.trim())
@@ -119,7 +119,7 @@ export function mapAccommodationPayload(
 ): AccommodationApiPayload {
   return {
     name: acc.name,
-    description: stripHtml(acc.description) || acc.description,
+    description: richTextToPlain(acc.description),
     price: acc.price,
     peoplePerRoom: acc.peoplePerRoom,
     capacity: acc.totalCapacity,
@@ -138,7 +138,7 @@ export function mapTransportPayload(
 ): TransportApiPayload {
   return {
     name: transport.name,
-    description: stripHtml(transport.description) || transport.description,
+    description: richTextToPlain(transport.description),
     price: pickup.price,
     available: true,
     pickupLocation: pickup.pickupLocation,

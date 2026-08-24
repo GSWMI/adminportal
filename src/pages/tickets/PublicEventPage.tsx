@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Calendar, MapPin, ChevronDown, ChevronUp, Minus, Plus, Loader2 } from 'lucide-react'
 import { getEventBySlug, type EventData } from '../../services/eventService'
+import { richTextToPlain } from '../../lib/richText'
 
 function formatDate(s: string) {
   if (!s) return ''
@@ -106,7 +107,7 @@ export default function PublicEventPage() {
             <div className="p-8 flex flex-col justify-center gap-4">
               <h1 className="text-3xl font-bold text-gray-900 leading-tight">{event.name}</h1>
               {event.description && (
-                <p className="text-[14px] text-gray-600 leading-relaxed line-clamp-4">{event.description}</p>
+                <p className="text-[14px] text-gray-600 leading-relaxed line-clamp-4">{richTextToPlain(event.description)}</p>
               )}
               <div className="flex items-center gap-2 text-[13px] text-gray-600">
                 <Calendar size={14} className="text-[#3b5bdb]" />
