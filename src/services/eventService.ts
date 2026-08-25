@@ -34,6 +34,7 @@ export interface AccommodationData {
 
 export interface TransportData {
   _id: string
+  id?: string // fetch returns `id` rather than `_id`
   name: string
   description: string
   price: number
@@ -41,6 +42,12 @@ export interface TransportData {
   pickupLocation: string
   dropoffLocation: string
   eventId: string
+}
+
+// Fetch endpoints return transport keyed as `id`; create/update need `_id`.
+// Normalize so downstream code (edit cards, cache updates) always has `_id`.
+function normalizeTransport(raw: Record<string, unknown>): TransportData {
+  return { ...raw, _id: (raw._id ?? raw.id ?? '') as string } as TransportData
 }
 
 export interface EventData {
@@ -171,18 +178,19 @@ export async function updateTransportById(id: string, payload: object): Promise<
 export async function getEventTransport(eventId: string): Promise<TransportData[]> {
   const { data } = await api.get(`/events/${eventId}/transports`)
   const inner = data?.data ?? data
-  if (Array.isArray(inner)) return inner
-  if (Array.isArray(inner?.transports)) return inner.transports
-  if (Array.isArray(inner?.transport)) return inner.transport
+  let raw: unknown[] = []
+  if (Array.isArray(inner)) raw = inner
+  else if (Array.isArray(inner?.transports)) raw = inner.transports
+  else if (Array.isArray(inner?.transport)) raw = inner.transport
   // Endpoint may return a single object under `transport`/`transports`.
-  if (inner?.transports && typeof inner.transports === 'object') return [inner.transports]
-  if (inner?.transport && typeof inner.transport === 'object') return [inner.transport]
-  return []
+  else if (inner?.transports && typeof inner.transports === 'object') raw = [inner.transports]
+  else if (inner?.transport && typeof inner.transport === 'object') raw = [inner.transport]
+  return raw.map((t) => normalizeTransport(t as Record<string, unknown>))
 }
 
 export async function getTransportById(transportId: string): Promise<TransportData> {
   const { data } = await api.get(`/events/transports/${transportId}`)
-  return data?.data?.transport ?? data?.data ?? data?.transport ?? data
+  return normalizeTransport(data?.data?.transport ?? data?.data ?? data?.transport ?? data)
 }
 
 export async function deleteTransport(id: string): Promise<void> {
